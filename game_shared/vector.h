@@ -5,6 +5,8 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
+#include "port.h"
+
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
@@ -30,17 +32,8 @@ class NxVec3;
 
 inline void SinCos( float angle, float *sine, float *cosine ) 
 {
-    __asm
-    {
-        push	ecx
-        fld	dword ptr angle
-        fsincos
-        mov	ecx, dword ptr[cosine]
-        fstp      dword ptr [ecx]
-        mov 	ecx, dword ptr[sine]
-        fstp	dword ptr [ecx]
-        pop	ecx
-    }
+    *sine = sinf( angle );
+    *cosine = cosf( angle );
 }
 
 //=========================================================

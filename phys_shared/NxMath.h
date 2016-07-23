@@ -433,6 +433,12 @@ Many of these are just implemented as NX_INLINE calls to the C lib right now,
 but later we could replace some of them with some approximations or more
 clever stuff.
 */
+#ifndef __WIN32
+NX_INLINE static bool NxMath::isFinite(NxF32 x)
+{
+    return !!isfinite(x);
+}
+#endif
 NX_INLINE bool NxMath::equals(NxF32 a,NxF32 b,NxF32 eps)
 	{
 	const NxF32 diff = NxMath::abs(a - b);
@@ -508,7 +514,7 @@ NX_INLINE NxI32 NxMath::sign(NxI32 a)
 #if defined(WIN32)
 #include "win/NxMath_WIN.h"
 #elif defined(LINUX) || defined(__APPLE__)
-#include "linux/NxMath_LINUX.h"
+//#include "linux/NxMath_LINUX.h"
 #elif defined(_XBOX)
 #include "xbox360/NxMath_XBOX.h"
 #elif defined(__CELLOS_LV2__)

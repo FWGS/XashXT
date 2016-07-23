@@ -357,7 +357,7 @@ void CBaseDoor::Spawn( void )
 	else
 	{
 		// touchable button
-		SetTouch( DoorTouch );
+		SetTouch( &DoorTouch );
 	}
 }
 
@@ -582,7 +582,7 @@ void CBaseDoor::DoorGoUp( void )
 		EMIT_SOUND( edict(), CHAN_STATIC, STRING( pev->noise1 ), 1, ATTN_NORM );
 
 	m_iState = STATE_TURN_ON;
-	SetMoveDone( DoorHitTop );
+	SetMoveDone( &DoorHitTop );
 
 	if( IsRotatingDoor( ))
 	{
@@ -641,13 +641,13 @@ void CBaseDoor::DoorHitTop( void )
 	{
 		// re-instate touch method, movement is complete
 		if( !FBitSet( pev->spawnflags, SF_DOOR_USE_ONLY ))
-			SetTouch( DoorTouch );
+			SetTouch( &DoorTouch );
 	}
 	else
 	{
 		// in flWait seconds, DoorGoDown will fire, unless wait is -1, then door stays open
 		SetMoveDoneTime( m_flWait );
-		SetMoveDone( DoorGoDown );
+		SetMoveDone( &DoorGoDown );
 
 		if( m_flWait == -1 )
 		{
@@ -678,7 +678,7 @@ void CBaseDoor::DoorGoDown( void )
 	ASSERT( m_iState == STATE_ON || m_iState == STATE_TURN_ON );
 	m_iState = STATE_TURN_OFF;
 
-	SetMoveDone( DoorHitBottom );
+	SetMoveDone( &DoorHitBottom );
 
 	if( IsRotatingDoor( ))
 		AngularMove( m_vecAngle1, pev->speed );
@@ -705,7 +705,7 @@ void CBaseDoor::DoorHitBottom( void )
 	else
 	{
 		// touchable door
-		SetTouch( DoorTouch );
+		SetTouch( &DoorTouch );
 	}
 
 	// fire the close target (if startopen is set, then "top" is closed) - netname is the close target
@@ -906,7 +906,7 @@ void CRotDoor :: Spawn( void )
 	else
 	{
 		// touchable button
-		SetTouch( DoorTouch );
+		SetTouch( &DoorTouch );
 	}
 }
 
@@ -1174,7 +1174,7 @@ void CMomentaryDoor :: MoveDone( void )
 {
 	// stop sounds at the next think, rather than here as another
 	// SetPosition call might immediately follow the end of this move
-	SetThink( StopMoveSound );
+	SetThink( &StopMoveSound );
 	SetNextThink( 0.1f );
 
 	CBaseToggle::MoveDone();
@@ -1615,7 +1615,7 @@ void CBaseTrainDoor :: DoorHitBottom( void )
 
 	if( pev->impulse )
 	{
-		SetThink( ActivateTrain );
+		SetThink( &ActivateTrain );
 		SetNextThink( 1.0 );
 	}
 

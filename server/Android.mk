@@ -15,7 +15,7 @@ endif
 
 # Xash doesn't have any voice chat, so remove it from gamedll too.
 LOCAL_CFLAGS += -D_LINUX -DCLIENT_WEAPONS -DNO_VOICEGAMEMGR -Dstricmp=strcasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf \
-	-fno-exceptions -Wextra -Wno-write-strings
+	-fno-exceptions -Wextra -Wno-write-strings -fpermissive -DNX32 -DLINUX
 
 LOCAL_CPPFLAGS := $(LOCAL_CFLAGS) -frtti
 
@@ -147,7 +147,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/. \
 			$(LOCAL_PATH)/../game_shared \
 			$(LOCAL_PATH)/../server \
 			$(LOCAL_PATH)/../server/monsters \
-			$(LOCAL_PATH)/../server/physics
+			$(LOCAL_PATH)/../server/physics \
+			$(LOCAL_PATH)/../phys_shared
 
 LOCAL_SRC_FILES := $(SRCS)
 

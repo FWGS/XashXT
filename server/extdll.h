@@ -59,16 +59,21 @@ typedef int BOOL;
 #endif //_WIN32
 
 // Misc C-runtime library headers
+#include "port.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "math.h"
 #include "mathlib.h"
+#include "ctype.h"
 
 // Header file containing definition of globalvars_t and entvars_t
 typedef int	string_t;		// from engine's pr_comp.h;
 
+#ifdef _WIN32
 typedef HMODULE	dllhandle_t;
-
+#else
+typedef void* dllhandle_t;
+#endif
 typedef struct dllfunc_s
 {
 	const char *name;

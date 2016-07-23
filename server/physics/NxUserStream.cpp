@@ -18,7 +18,11 @@ GNU General Public License for more details.
 #include "Nxf.h"
 #include "NxSimpleTypes.h"
 #include "NxUserStream.h"
+#ifdef _WIN32
 #include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 
 // user stream. constructor
 UserStream :: UserStream( const char* filename, bool load ) : fp(NULL)
@@ -78,7 +82,11 @@ void UserStream :: CreatePath( char *path )
 			// create the directory
 			save = *ofs;
 			*ofs = 0;
-			_mkdir( path );
+#ifdef _WIN32
+            _mkdir( path );
+#else
+            mkdir( path, 0777 );
+#endif
 			*ofs = save;
 		}
 	}
@@ -138,15 +146,17 @@ void UserStream :: readBuffer( void *outbuf, NxU32 size ) const
 
 	if( m_iOffset + size <= m_iLength )
 	{
+        size_t *ptmp = (size_t*)&m_iOffset;
 		memcpy( outbuf, buffer + m_iOffset, size );
-		(size_t)m_iOffset += size;
+        *ptmp += size;
 		read_size = size;
 	}
 	else
 	{
-		size_t reduced_size = m_iLength - m_iOffset;
+        size_t reduced_size = m_iLength - m_iOffset, *ptmp = (size_t*)&m_iOffset;
+
 		memcpy( outbuf, buffer + m_iOffset, reduced_size );
-		(size_t)m_iOffset += reduced_size;
+        *ptmp += reduced_size;
 		read_size = reduced_size;
 		ALERT( at_warning, "readBuffer: buffer is overrun\n" );
 	}

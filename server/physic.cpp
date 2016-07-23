@@ -24,7 +24,7 @@ GNU General Public License for more details.
 #include	"game.h"
 #include	"com_model.h"
 #include	"movelist.h"
-#include	"features.h"
+#include	"xash_features.h"
 #include	"physic.h"
 #include  "triangleapi.h"
 #include  "pm_defs.h"

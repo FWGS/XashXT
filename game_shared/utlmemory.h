@@ -19,7 +19,11 @@
 #endif
 
 #define ALIGN_VALUE( val, alignment )	(( val + alignment - 1 ) & ~( alignment - 1 ))
+#ifdef _WIN32
 #define stackalloc( _size )		_alloca( ALIGN_VALUE( _size, 16 ) )
+#else
+#define stackalloc( _size )		alloca( ALIGN_VALUE( _size, 16 ) )
+#endif
 #define stackfree( _p )		0
 
 //-----------------------------------------------------------------------------

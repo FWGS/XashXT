@@ -11,9 +11,7 @@
 #ifndef UTLVECTOR_H
 #define UTLVECTOR_H
 
-#ifdef _WIN32
 #pragma once
-#endif
 
 #include <assert.h>
 #include <string.h>
@@ -177,7 +175,7 @@ public:
 // A array class with a fixed allocation scheme
 //-----------------------------------------------------------------------------
 
-template< class BASE_UTLVECTOR, class MUTEX_TYPE = CThreadFastMutex >
+template< class BASE_UTLVECTOR, class MUTEX_TYPE >
 class CUtlArrayMT : public BASE_UTLVECTOR, public MUTEX_TYPE
 {
 	typedef BASE_UTLVECTOR BaseClass;

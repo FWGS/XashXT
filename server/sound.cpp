@@ -196,7 +196,7 @@ void CAmbientGeneric :: Spawn( void )
 	{
 		Vector vecOrigin = GetAbsOrigin();
 		ALERT( at_error, "EMPTY AMBIENT AT: %f, %f, %f\n", vecOrigin.x, vecOrigin.y, vecOrigin.z );
-		SetThink( SUB_Remove );
+		SetThink( &SUB_Remove );
 		SetNextThink( 0.1 );
 		return;
 	}
@@ -216,11 +216,11 @@ void CAmbientGeneric :: Spawn( void )
 	// of ambient sound's pitch or volume. Don't
 	// start thinking yet.
 
-	SetThink( RampThink );
+	SetThink( &RampThink );
 	pev->nextthink = 0;
 
 	// allow on/off switching via 'use' function.
-	SetUse( ToggleUse );
+	SetUse( &ToggleUse );
 	
 	m_fActive = FALSE;
 
@@ -255,7 +255,7 @@ void CAmbientGeneric :: Precache( void )
 	{
 		if( m_hParent != NULL )
 		{
-			SetThink( StartDynamicSound ); 
+			SetThink( &StartDynamicSound ); 
 		}
 		else
 		{
@@ -271,7 +271,7 @@ void CAmbientGeneric :: StartDynamicSound( void )
 
 	EMIT_SOUND_DYN( edict(), CHAN_ITEM, szSoundFile,	(m_dpv.vol * 0.01), m_flAttenuation, SND_SPAWNING, m_dpv.pitch);
 
-	SetThink( RampThink );
+	SetThink( &RampThink );
 	SetNextThink( 0.1 );
 }
 
@@ -2049,19 +2049,19 @@ void CSpeaker :: Spawn( void )
 		Vector vecOrigin = GetAbsOrigin();
 		ALERT( at_error, "SPEAKER with no Level/Sentence! at: %f, %f, %f\n", vecOrigin.x, vecOrigin.y, vecOrigin.z );
 		SetNextThink( 0.1 );
-		SetThink( SUB_Remove );
+		SetThink( &SUB_Remove );
 		return;
 	}
 
 	pev->solid = SOLID_NOT;
 	pev->movetype = MOVETYPE_NONE;
 
-	SetThink( SpeakerThink );
+	SetThink( &SpeakerThink );
 	pev->nextthink = 0.0;
 
 	// allow on/off switching via 'use' function.
 
-	SetUse ( ToggleUse );
+	SetUse( &ToggleUse );
 
 	Precache( );
 }

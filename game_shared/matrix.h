@@ -184,8 +184,8 @@ public:
 			mat[0][2], mat[1][2], mat[2][2] );
 	}
 
-	Vector matrix3x3::VectorRotate( const Vector &v ) const;
-	Vector matrix3x3::VectorIRotate( const Vector &v ) const;
+    Vector VectorRotate( const Vector &v ) const;
+    Vector VectorIRotate( const Vector &v ) const;
 
 	matrix3x3 Concat( const matrix3x3 mat2 );
 

@@ -261,15 +261,15 @@ void CDecal :: Spawn( void )
 
 	if ( FStringNull ( pev->targetname ) )
 	{
-		SetThink( StaticDecal );
+		SetThink( &StaticDecal );
 		// if there's no targetname, the decal will spray itself on as soon as the world is done spawning.
 		pev->nextthink = gpGlobals->time;
 	}
 	else
 	{
 		// if there IS a targetname, the decal sprays itself on when it is triggered.
-		SetThink ( SUB_DoNothing );
-		SetUse(TriggerDecal);
+		SetThink( &SUB_DoNothing );
+		SetUse( &TriggerDecal);
 	}
 }
 
@@ -295,7 +295,7 @@ void CDecal :: TriggerDecal ( CBaseEntity *pActivator, CBaseEntity *pCaller, USE
 			WRITE_SHORT( (int)VARS( trace.pHit )->modelindex );
 	MESSAGE_END();
 
-	SetThink( SUB_Remove );
+	SetThink( &SUB_Remove );
 	SetNextThink( 0.1 );
 }
 
@@ -511,7 +511,7 @@ int CGlobalState::Save( CSave &save )
 	if ( !save.WriteFields( "GLOBAL", this, NULL, m_DataMap.dataDesc, m_DataMap.dataNumFields ) )
 		return 0;
 
-	DATAMAP *pMap = &globalentity_t.m_DataMap;
+    DATAMAP *pMap = &pEntity->m_DataMap;
 	
 	pEntity = m_pList;
 	for ( i = 0; i < m_listCount && pEntity; i++ )
@@ -535,7 +535,7 @@ int CGlobalState::Restore( CRestore &restore )
 	if ( !restore.ReadFields( "GLOBAL", this, NULL, m_DataMap.dataDesc, m_DataMap.dataNumFields ) )
 		return 0;
 
-	DATAMAP *pMap = &globalentity_t.m_DataMap;
+    DATAMAP *pMap = &tmpEntity.m_DataMap;
 	
 	listCount = m_listCount;	// Get new list count
 	m_listCount = 0;				// Clear loaded data
@@ -765,7 +765,7 @@ void CWorld :: Precache( void )
 		CBaseEntity *pEntity = CBaseEntity::Create( "env_message", g_vecZero, g_vecZero, NULL );
 		if ( pEntity )
 		{
-			pEntity->SetThink( SUB_CallUseToggle );
+			pEntity->SetThink( &SUB_CallUseToggle );
 			pEntity->pev->message = pev->netname;
 			pev->netname = 0;
 			pEntity->pev->nextthink = gpGlobals->time + 0.3;

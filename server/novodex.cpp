@@ -177,9 +177,12 @@ void CPhysicNovodex :: InitPhysic( void )
 			return;
 		}
 	}
-
+#warning "FIX"
+#if 0
 	m_pPhysics = pNxCreatePhysicsSDK( NX_PHYSICS_SDK_VERSION, NULL, &m_ErrorStream );
-
+#else
+    m_pPhysics = NULL;
+#endif
 	if( !m_pPhysics )
 	{
 		ALERT( at_error, "InitPhysic: failed to initalize physics engine\n" );
@@ -696,8 +699,12 @@ NxConvexMesh *CPhysicNovodex :: ConvexMeshFromStudio( entvars_t *pev, int modeli
 	meshDesc.flags |= NX_CF_COMPUTE_CONVEX;
 
 	m_pCooking->NxInitCooking();
-	bool status = m_pCooking->NxCookConvexMesh( meshDesc, UserStream( szHullFilename, false ));
-
+#warning "FIX"
+#if 0
+    bool status = m_pCooking->NxCookConvexMesh( meshDesc, UserStream( szHullFilename, false ));
+#else
+    bool status = false;
+#endif
 	delete [] verts;
 	delete [] m_verts;
 	delete [] indices;
@@ -895,8 +902,12 @@ NxTriangleMesh *CPhysicNovodex :: TriangleMeshFromStudio( entvars_t *pev, int mo
 	meshDesc.flags = 0;
 
 	m_pCooking->NxInitCooking();
-	bool status = m_pCooking->NxCookTriangleMesh( meshDesc, UserStream( szMeshFilename, false ));
-
+#warning "FIX"
+#if 0
+    bool status = m_pCooking->NxCookTriangleMesh( meshDesc, UserStream( szMeshFilename, false ));
+#else
+    bool status = false;
+#endif
 	delete [] verts;
 	delete [] m_verts;
 	delete [] indices;
@@ -1753,8 +1764,11 @@ int CPhysicNovodex :: BuildCollisionTree( char *szMapName )
 	if( m_pCooking )
 	{
 		m_pCooking->NxInitCooking();
+#warning "FIX"
+#if 0
 		bool status = m_pCooking->NxCookTriangleMesh( levelDesc, UserStream( szHullFilename, false ));
-          }
+#endif
+    }
 
 	delete [] indices;
 

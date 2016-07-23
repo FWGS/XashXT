@@ -14,7 +14,11 @@ GNU General Public License for more details.
 */
 
 #define NOMINMAX
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include "stdarg.h"
+#endif
 #include <stdio.h>
 #include <vector.h>
 #include <stringlib.h>
