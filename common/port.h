@@ -5,11 +5,17 @@
 #define _cdecl
 #define __single_inheritance
 #define RESTRICT
-#define BOOL bool
+#ifndef TRUE
+typedef int BOOL;
+
+
+#define FALSE 0
+#define TRUE !FALSE
+#endif
 #include <dlfcn.h>
-#define TRUE true
-#define FALSE false
+#ifndef max
 #define max( a, b )                 (((a) > (b)) ? (a) : (b))
 #define min( a, b )                 (((a) < (b)) ? (a) : (b))
+#endif
 #include <ctype.h>
 

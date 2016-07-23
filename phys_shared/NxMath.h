@@ -34,7 +34,8 @@ static const NxF32 NxHalfPiF32	= 1.57079632679489661923f;
 static const NxF32 NxTwoPiF32	= 6.28318530717958647692f;
 static const NxF32 NxInvPiF32	= 0.31830988618379067154f;
 
-
+#undef min
+#undef max
 #if defined(min) || defined(max)
 #error Error: min or max is #defined, probably in <windows.h>.  Put #define NOMINMAX before including windows.h to suppress windows global min,max macros.
 #endif
