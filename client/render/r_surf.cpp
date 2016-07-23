@@ -17,10 +17,15 @@ GNU General Public License for more details.
 #include "utils.h"
 #include "r_local.h"
 #include "pm_movevars.h"
-#include "features.h"
+#include "xash_features.h"
 #include "mathlib.h"
 #include "r_weather.h"
 #include "r_particle.h"
+
+#undef min
+#undef max
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
 
 #define DECAL_TRANSPARENT_THRESHOLD	230	// transparent decals draw with GL_MODULATE
 

@@ -18,7 +18,9 @@ GNU General Public License for more details.
 #include "r_local.h"
 #include "mathlib.h"
 #include "event_api.h"
-
+#undef min
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
 grasshdr_t		*grasschain[3];
 grassvert_t		grassverts[GRASS_VERTS];
 grasstex_t		grasstexs[GRASS_TEXTURES];

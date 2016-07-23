@@ -14,12 +14,14 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 */
-
+#include "port.h"
 #include "hud.h"
 #include "utils.h"
 #include "r_local.h"
 #include "mathlib.h"
-
+#undef min
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
 /*
 ==============================================================================
 
@@ -112,7 +114,7 @@ static void R_Bloom_InitEffectTexture( void )
 		CVAR_SET_FLOAT( "r_bloom_sample_size", 32.0f );
 
 	// make sure bloom size doesn't have stupid values
-	limit = min( r_bloom_sample_size->value, min( screen_texture_width, screen_texture_height ));
+    limit = min( r_bloom_sample_size->value, min( screen_texture_width, screen_texture_height ));
 
 	if( GL_Support( R_ARB_TEXTURE_NPOT_EXT ))
 	{

@@ -27,6 +27,11 @@ GNU General Public License for more details.
 #include "triangleapi.h"
 #include "entity_types.h"
 
+#undef min
+#undef max
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
+
 // Global engine <-> studio model rendering code interface
 engine_studio_api_t IEngineStudio;
 

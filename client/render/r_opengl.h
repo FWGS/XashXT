@@ -15,8 +15,12 @@ GNU General Public License for more details.
 
 #ifndef R_OPENGL_H
 #define R_OPENGL_H
-
+#ifdef _WIN32
 #include <windows.h>
+#else
+#define WINAPI
+#define PROC void*
+#endif
 
 #ifndef APIENTRY
 #define APIENTRY

@@ -14,6 +14,11 @@
 #include "r_studio.h"
 #include <mathlib.h>
 
+#undef min
+#undef max
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
+
 // thirdperson camera
 void CAM_Think( void ) { R_ClearScene(); }
 void CL_CameraOffset( float *ofs ) { g_vecZero.CopyToArray( ofs ); }
@@ -1017,8 +1022,8 @@ void V_CalcGlobalFog( struct ref_params_s *pparams )
 //==========================
 void V_CalcRefdef( struct ref_params_s *pparams )
 {
-	pause = pparams->paused;
-	if( pause ) return;
+//	pause = pparams->paused;
+//	if( pause ) return;
 
 	if( pparams->intermission )
 	{

@@ -20,11 +20,16 @@ GNU General Public License for more details.
 #include "triangleapi.h"
 #include "custom_alloc.h"
 #include "parsemsg.h"
-#include "features.h"
+#include "xash_features.h"
 #include "r_weather.h"
 #include "r_local.h"
 #include "matrix.h"
 #include <mathlib.h>
+
+#undef min
+#undef max
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
 
 void WaterLandingEffect( cl_drip *drip );
 void ParseRainFile( void );

@@ -28,6 +28,7 @@ extern "C" {
 
 #include "const.h"
 #include <alert.h>
+#include "stdint.h"
 
 #define MAX_ALIAS_NAME	32
 
@@ -107,7 +108,7 @@ typedef struct hud_player_info_s
 	short		topcolor;
 	short		bottomcolor;
 
-	unsigned __int64	m_nSteamID;
+    uint64_t	m_nSteamID;
 } hud_player_info_t;
 
 typedef struct cl_enginefuncs_s

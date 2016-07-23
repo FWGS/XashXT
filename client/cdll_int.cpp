@@ -217,6 +217,7 @@ void HUD_Reset( void )
 
 static int *VGUI_GetRect( void )
 {
+#ifdef _WIN32
 	static int extent[4];
 	RECT wrect;
 
@@ -240,6 +241,9 @@ static int *VGUI_GetRect( void )
 		}
 	}
 	return extent;	
+#else
+    return NULL;
+#endif
 }
 
 /*

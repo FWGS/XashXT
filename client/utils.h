@@ -17,10 +17,13 @@ GNU General Public License for more details.
 #define UTILS_H
 
 #include "cvardef.h"
-
+#ifdef _WIN32
 #define EXPORT	_declspec( dllexport )
 #define DLLEXPORT	__declspec( dllexport )
-
+#else
+#define EXPORT
+#define DLLEXPORT
+#endif
 typedef unsigned char byte;
 typedef unsigned short word;
 
@@ -34,8 +37,11 @@ extern float v_idlescale;
 
 extern int g_iXashEngineBuildNumber;
 extern BOOL g_fRenderInitialized;
-
+#ifdef _WIN32
 typedef HMODULE dllhandle_t;
+#else
+typedef void * dllhandle_t;
+#endif
 
 typedef struct dllfunc_s
 {
@@ -125,11 +131,11 @@ extern void IN_Init( void );
 extern void IN_Move( float frametime, struct usercmd_s *cmd );
 extern void IN_Shutdown( void );
 
-extern void IN_ActivateMouse( void );
-extern void IN_DeactivateMouse( void );
-extern void IN_MouseEvent( int mstate );
-extern void IN_Accumulate( void );
-extern void IN_ClearStates( void );
+extern "C" void IN_ActivateMouse( void );
+extern "C" void IN_DeactivateMouse( void );
+extern "C" void IN_MouseEvent( int mstate );
+extern "C" void IN_Accumulate( void );
+extern "C" void IN_ClearStates( void );
 extern void *KB_Find( const char *name );
 extern void CL_CreateMove( float frametime, struct usercmd_s *cmd, int active );
 

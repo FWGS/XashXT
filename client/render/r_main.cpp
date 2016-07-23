@@ -24,7 +24,12 @@ GNU General Public License for more details.
 #include "r_particle.h"
 #include "entity_types.h"
 #include "r_weather.h"
-#include "features.h"
+#include "xash_features.h"
+
+#undef min
+#undef max
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
 
 #define IsLiquidContents( cnt )	( cnt == CONTENTS_WATER || cnt == CONTENTS_SLIME || cnt == CONTENTS_LAVA )
 

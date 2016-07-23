@@ -22,9 +22,11 @@
 #define RGB_YELLOWISH	0x00FFA000 // 255, 160, 0
 #define RGB_REDISH		0x00FF1010 // 255, 160, 0
 #define RGB_GREENISH	0x0000A000 // 0, 160, 0
-
+#include "port.h"
 #include "wrect.h"
+#ifdef _WIN32
 #include "windows.h"
+#endif
 #include "vector.h"
 #include "cdll_int.h"
 #include "cdll_dll.h"

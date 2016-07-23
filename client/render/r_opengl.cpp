@@ -810,12 +810,20 @@ R_Init
 */
 bool R_Init( void )
 {
+#ifdef _WIN32
 	if( !Sys_LoadLibrary( "*opengl32.dll", &opengl_dll ))
 	{
 		g_fRenderInitialized = FALSE;
 		return false;
 	}
-
+#else
+    if( !Sys_LoadLibrary( "*libGL.so.1", &opengl_dll ))
+    {
+        g_fRenderInitialized = FALSE;
+        ALERT( at_aiconsole, "Failed to load opengl library!\n" );
+        return false;
+    }
+#endif
 	GL_SetDefaultState();
 	GL_InitExtensions();
 	GL_InitPrograms();

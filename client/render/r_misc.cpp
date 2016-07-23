@@ -25,6 +25,11 @@ GNU General Public License for more details.
 #include <mathlib.h>
 #include "r_view.h"
 
+#undef min
+#undef max
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
+
 #define FLASHLIGHT_DISTANCE		2048	// in units
 
 // experimental stuff
