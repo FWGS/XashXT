@@ -283,6 +283,7 @@ mlook and mouse, or klook and keyboard, pitch drifting is constantly stopped.
 */
 void V_DriftPitch( struct ref_params_s *pparams )
 {
+    return false;
 	if( gEngfuncs.IsNoClipping() || !pparams->onground || pparams->demoplayback )
 	{
 		pd.driftmove = 0;
@@ -1022,8 +1023,8 @@ void V_CalcGlobalFog( struct ref_params_s *pparams )
 //==========================
 void V_CalcRefdef( struct ref_params_s *pparams )
 {
-//	pause = pparams->paused;
-//	if( pause ) return;
+    //pause = pparams->paused;
+    //if( pause ) return;
 
 	if( pparams->intermission )
 	{

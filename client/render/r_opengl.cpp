@@ -364,7 +364,11 @@ static dllfunc_t arbfbofuncs[] =
 
 static dllfunc_t wglproc_funcs[] =
 {
+#ifdef _WIN32
 { "wglGetProcAddress"  , (void **)&pwglGetProcAddress },
+#else
+{ "glXGetProcAddress"  , (void **)&pwglGetProcAddress },
+#endif
 { NULL, NULL }
 };
 
@@ -438,8 +442,11 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, int r_ext )
 	{
 		// functions are cleared before all the extensions are evaluated
 		if(!(*func->func = (void *)GL_GetProcAddress( func->name )))
+        {
 			GL_SetExtension( r_ext, false ); // one or more functions are invalid, extension will be disabled
-	}
+            ALERT( at_aiconsole, "- ^1failed\n" );
+        }
+    }
 
 	if( GL_Support( r_ext ))
 		ALERT( at_aiconsole, "- ^2enabled\n" );
