@@ -30,7 +30,7 @@
 #endif
 
 #include "datamap.h"
-#include "strings.h"
+#include "xash_strings.h"
 
 #include "com_model.h"
 #include "sprite.h"

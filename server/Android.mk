@@ -1,5 +1,5 @@
-#HLSDK server Android port
-#Copyright (c) nicknekit
+#XashXT port
+#Copyright (c) mittorn
 
 LOCAL_PATH := $(call my-dir)
 
@@ -15,7 +15,7 @@ endif
 
 # Xash doesn't have any voice chat, so remove it from gamedll too.
 LOCAL_CFLAGS += -D_LINUX -DCLIENT_WEAPONS -DNO_VOICEGAMEMGR -Dstricmp=strcasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf \
-	-fno-exceptions -Wextra -Wno-write-strings -fpermissive -DNX32 -DLINUX
+	-fno-exceptions -Wextra -Wno-write-strings -fpermissive -DNX32 -DLINUX -fsigned-char
 
 LOCAL_CPPFLAGS := $(LOCAL_CFLAGS) -frtti
 
