@@ -727,7 +727,7 @@ typedef unsigned int GLhandleARB;
 #define GL_RENDERBUFFER_ALPHA_SIZE_EXT		0x8D53
 #define GL_RENDERBUFFER_DEPTH_SIZE_EXT		0x8D54
 #define GL_RENDERBUFFER_STENCIL_SIZE_EXT	0x8D55
-
+#ifndef XASHXT_NANOGL
 // helper opengl functions
 EXTERN GLenum ( APIENTRY *pglGetError )(void);
 EXTERN const GLcharARB * ( APIENTRY *pglGetString )(GLenum name);
@@ -1183,5 +1183,8 @@ EXTERN void ( APIENTRY *pglGetFramebufferAttachmentParameteriv )(GLenum target, 
 EXTERN void ( APIENTRY *pglBlitFramebuffer )(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
 EXTERN void ( APIENTRY *pglGenerateMipmap )(GLenum target);
 EXTERN PROC ( WINAPI *pwglGetProcAddress)( const char * );
+#else
+#include "r_nanogl.h"
+#endif // XASHXT_NANOGL
 
 #endif//R_OPENGL_H

@@ -15,7 +15,7 @@ endif
 
 # Xash doesn't have any voice chat, so remove it from gamedll too.
 LOCAL_CFLAGS += -D_LINUX -DCLIENT_WEAPONS -DNO_VOICEGAMEMGR -Dstricmp=strcasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf \
-	-fno-exceptions -Wextra -Wno-write-strings -fpermissive -DNX32 -DLINUX -DCLIENT_DLL=1 -fsigned-char
+	-fno-exceptions -Wextra -Wno-write-strings -fpermissive -DNX32 -DLINUX -DCLIENT_DLL=1 -fsigned-char -DXASHXT_NANOGL
 
 LOCAL_CPPFLAGS := $(LOCAL_CFLAGS) -frtti
 
@@ -56,7 +56,7 @@ SRCS += ./render/r_mirror.cpp
 SRCS += ./render/r_misc.cpp
 SRCS += ./render/r_monitor.cpp
 SRCS += ./render/r_movie.cpp
-SRCS += ./render/r_opengl.cpp
+#SRCS += ./render/r_opengl.cpp
 SRCS += ./render/r_particle.cpp
 SRCS += ./render/r_portal.cpp
 SRCS += ./render/r_shadows.cpp
