@@ -520,7 +520,11 @@ static void GL_InitExtensions( void )
 	// point particles extension
 	GL_CheckExtension( "GL_EXT_point_parameters", pointparametersfunc, R_EXT_POINTPARAMETERS );
 
+#ifdef __ANDROID__
+    GL_CheckExtension( "GL_OES_texture_npot", NULL, R_ARB_TEXTURE_NPOT_EXT );
+#else
 	GL_CheckExtension( "GL_ARB_texture_non_power_of_two", NULL, R_ARB_TEXTURE_NPOT_EXT );
+#endif
 	GL_CheckExtension( "GL_ARB_texture_compression", texturecompressionfuncs, R_TEXTURE_COMPRESSION_EXT );
     GL_CheckExtension( "glDrawArrays", compiledvertexarrayfuncs, R_CUSTOM_VERTEX_ARRAY_EXT );
 
