@@ -56,7 +56,7 @@ SRCS += ./render/r_mirror.cpp
 SRCS += ./render/r_misc.cpp
 SRCS += ./render/r_monitor.cpp
 SRCS += ./render/r_movie.cpp
-#SRCS += ./render/r_opengl.cpp
+SRCS += ./render/r_nanogl.cpp
 SRCS += ./render/r_particle.cpp
 SRCS += ./render/r_portal.cpp
 SRCS += ./render/r_shadows.cpp
@@ -76,6 +76,11 @@ SRCS += ./text_message.cpp
 SRCS += ./train.cpp
 SRCS += ./utils.cpp
 
+SRCS += ./render/nanogl/eglwrap.cpp
+SRCS += ./render/nanogl/nanoWrap.cpp
+
+SRCS += ./render/nanogl/nanogl.cpp
+
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/. \
 		    $(LOCAL_PATH)/wpn_shared \
@@ -89,7 +94,9 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/. \
 			$(LOCAL_PATH)/../server/monsters \
 			$(LOCAL_PATH)/../server/physics \
 			$(LOCAL_PATH)/../phys_shared \
-			$(LOCAL_PATH)/render
+			$(LOCAL_PATH)/render \
+			$(LOCAL_PATH)/render/nanogl \
+			$(LOCAL_PATH)/render/nanogl/GL
 
 LOCAL_SRC_FILES := $(SRCS)
 

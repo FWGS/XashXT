@@ -254,6 +254,8 @@ typedef unsigned char GLboolean;
 #define glVertex3d glVertex3f
 //#define glColor4ub(x,y,z,p) glColor4f(x,y,z,p) //nicknekit: wtf???
 #define glFogi glFogf
+extern "C"
+{
 void glBegin(GLenum mode);
 void glEnd(void);
 void glEnable (GLenum cap);
@@ -385,3 +387,4 @@ void pglNormalPointer(GLenum type, GLsizei stride, const void *ptr);
 void pglMultiTexCoord3f(GLenum, GLfloat, GLfloat, GLfloat);
 
 void pglMultiTexCoord2f(GLenum, GLfloat, GLfloat);
+}

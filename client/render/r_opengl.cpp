@@ -14,7 +14,7 @@ GNU General Public License for more details.
 */
 
 #define EXTERN
-
+#ifndef XASHXT_NANOGL
 #include "hud.h"
 #include "utils.h"
 #include "r_local.h"
@@ -874,3 +874,4 @@ void R_Shutdown( void )
 	// now all extensions are disabled
 	memset( glConfig.extension, 0, sizeof( glConfig.extension[0] ) * R_EXTCOUNT );
 }
+#endif // XASHXR_NANOGL
