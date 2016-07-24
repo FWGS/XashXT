@@ -189,8 +189,8 @@ static dllfunc_t multitexturefuncs[] =
 
 static dllfunc_t compiledvertexarrayfuncs[] =
 {
-{ "glLockArraysEXT"   , (void **)&pglLockArraysEXT },
-{ "glUnlockArraysEXT" , (void **)&pglUnlockArraysEXT },
+//{ "glLockArraysEXT"   , (void **)&pglLockArraysEXT },
+//{ "glUnlockArraysEXT" , (void **)&pglUnlockArraysEXT },
 { "glDrawArrays"      , (void **)&pglDrawArrays },
 { NULL, NULL }
 };
@@ -342,23 +342,23 @@ static dllfunc_t texturecompressionfuncs[] =
 
 static dllfunc_t arbfbofuncs[] =
 {
-{ "glIsRenderbuffer"                      , (void **)&pglIsRenderbuffer },
+//{ "glIsRenderbuffer"                      , (void **)&pglIsRenderbuffer },
 { "glBindRenderbuffer"                    , (void **)&pglBindRenderbuffer },
 { "glDeleteRenderbuffers"                 , (void **)&pglDeleteRenderbuffers },
 { "glGenRenderbuffers"                    , (void **)&pglGenRenderbuffers },
 { "glRenderbufferStorage"                 , (void **)&pglRenderbufferStorage },
-{ "glGetRenderbufferParameteriv"          , (void **)&pglGetRenderbufferParameteriv },
-{ "glIsFramebuffer"                       , (void **)&pglIsFramebuffer },
+//{ "glGetRenderbufferParameteriv"          , (void **)&pglGetRenderbufferParameteriv },
+//{ "glIsFramebuffer"                       , (void **)&pglIsFramebuffer },
 { "glBindFramebuffer"                     , (void **)&pglBindFramebuffer },
 { "glDeleteFramebuffers"                  , (void **)&pglDeleteFramebuffers },
 { "glGenFramebuffers"                     , (void **)&pglGenFramebuffers },
-{ "glCheckFramebufferStatus"              , (void **)&pglCheckFramebufferStatus },
-{ "glFramebufferTexture1D"                , (void **)&pglFramebufferTexture1D },
+//{ "glCheckFramebufferStatus"              , (void **)&pglCheckFramebufferStatus },
+//{ "glFramebufferTexture1D"                , (void **)&pglFramebufferTexture1D },
 { "glFramebufferTexture2D"                , (void **)&pglFramebufferTexture2D },
-{ "glFramebufferTexture3D"                , (void **)&pglFramebufferTexture3D },
+//{ "glFramebufferTexture3D"                , (void **)&pglFramebufferTexture3D },
 { "glFramebufferRenderbuffer"             , (void **)&pglFramebufferRenderbuffer },
-{ "glGetFramebufferAttachmentParameteriv" , (void **)&pglGetFramebufferAttachmentParameteriv },
-{ "glGenerateMipmap"                      , (void **)&pglGenerateMipmap },
+//{ "glGetFramebufferAttachmentParameteriv" , (void **)&pglGetFramebufferAttachmentParameteriv },
+//{ "glGenerateMipmap"                      , (void **)&pglGenerateMipmap },
 { NULL, NULL}
 };
 
@@ -444,7 +444,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, int r_ext )
 		if(!(*func->func = (void *)GL_GetProcAddress( func->name )))
         {
 			GL_SetExtension( r_ext, false ); // one or more functions are invalid, extension will be disabled
-            ALERT( at_aiconsole, "- ^1failed\n" );
+            ALERT( at_aiconsole, "WARNING: %s - ^1missing\n", func->name );
         }
     }
 
@@ -522,7 +522,7 @@ static void GL_InitExtensions( void )
 
 	GL_CheckExtension( "GL_ARB_texture_non_power_of_two", NULL, R_ARB_TEXTURE_NPOT_EXT );
 	GL_CheckExtension( "GL_ARB_texture_compression", texturecompressionfuncs, R_TEXTURE_COMPRESSION_EXT );
-	GL_CheckExtension( "GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, R_CUSTOM_VERTEX_ARRAY_EXT );
+    GL_CheckExtension( "glDrawArrays", compiledvertexarrayfuncs, R_CUSTOM_VERTEX_ARRAY_EXT );
 
 	if( !GL_Support( R_CUSTOM_VERTEX_ARRAY_EXT ))
 		GL_CheckExtension( "GL_SGI_compiled_vertex_array", compiledvertexarrayfuncs, R_CUSTOM_VERTEX_ARRAY_EXT );
@@ -595,8 +595,13 @@ static void GL_InitExtensions( void )
 		GL_SetExtension( R_ARB_TEXTURE_NPOT_EXT, false );
 
 	// FBO support
+#ifdef __ANDROID__
+    GL_CheckExtension( "GL_OES_framebuffer_object", arbfbofuncs, R_FRAMEBUFFER_OBJECT );
+#else
 	GL_CheckExtension( "GL_ARB_framebuffer_object", arbfbofuncs, R_FRAMEBUFFER_OBJECT );
+#endif
 
+   // GL_SetExtension( R_FRAMEBUFFER_OBJECT, true );
 	// Paranoia OpenGL32.dll may be eliminate shadows. Run special check for it
 	GL_CheckExtension( "PARANOIA_HACKS_V1", NULL, R_PARANOIA_EXT );
 }
@@ -823,6 +828,14 @@ bool R_Init( void )
 		g_fRenderInitialized = FALSE;
 		return false;
 	}
+#elif defined __ANDROID__
+    // libxash.so exports nanogl wrapper functions
+    if( !Sys_LoadLibrary( "*libxash.so", &opengl_dll ))
+    {
+        g_fRenderInitialized = FALSE;
+        ALERT( at_aiconsole, "Failed to load opengl library!\n" );
+        return false;
+    }
 #else
     if( !Sys_LoadLibrary( "*libGL.so.1", &opengl_dll ))
     {
