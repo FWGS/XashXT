@@ -3043,6 +3043,8 @@ void CStudioModelRenderer::StudioDrawMesh( short *ptricmds, float s, float t, in
 	byte	scale = 255;
 	int	i;
 
+    nDrawFlags |= MESH_DRAWARRAY; // improve performance
+
 	if( FBitSet( nDrawFlags, MESH_GLOWSHELL ))
 		scale = 1.0f + m_pCurrentEntity->curstate.renderamt * (1.0f / 255.0f);
 
@@ -3215,8 +3217,8 @@ void CStudioModelRenderer::StudioDrawMesh( short *ptricmds, float s, float t, in
 
 	// draw it now
 	if( GL_Support( R_DRAW_RANGEELEMENTS_EXT ))
-		pglDrawRangeElementsEXT( GL_TRIANGLES, 0, m_nNumArrayVerts, m_nNumArrayElems, GL_UNSIGNED_INT, m_arrayelems );
-	else pglDrawElements( GL_TRIANGLES, m_nNumArrayElems, GL_UNSIGNED_INT, m_arrayelems );
+        pglDrawRangeElementsEXT( GL_TRIANGLES, 0, m_nNumArrayVerts, m_nNumArrayElems, GL_UNSIGNED_SHORT, m_arrayelems );
+    else pglDrawElements( GL_TRIANGLES, m_nNumArrayElems, GL_UNSIGNED_SHORT, m_arrayelems );
 
 	pglDisableClientState( GL_VERTEX_ARRAY );
 
