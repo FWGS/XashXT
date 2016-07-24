@@ -124,7 +124,6 @@ SRCS += ./strings.cpp
 SRCS += ./subs.cpp
 SRCS += ./monsters/talkmonster.cpp
 SRCS += ./teamplay_gamerules.cpp
-SRCS += ./monsters/tempmonster.cpp
 SRCS += ./monsters/tentacle.cpp
 #SRCS += ./physics/trace.cpp
 SRCS += ./triggers.cpp
