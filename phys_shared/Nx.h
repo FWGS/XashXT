@@ -249,7 +249,7 @@ enum NxSDKCreateError
 	#include <malloc.h>
 	#define NxAlloca(x)	_alloca(x)
 #else
-	#include <alloca.h>
+	#include <stdlib.h>
 	#define NxAlloca(x)	alloca(x)
 #endif
 

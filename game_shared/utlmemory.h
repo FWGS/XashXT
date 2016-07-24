@@ -11,11 +11,14 @@
 #define UTLMEMORY_H
 
 #include <string.h>
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
+#endif
 #ifdef _WIN32
 #include <new.h>
 #else
 #include <new>
+#include <stdlib.h>
 #endif
 
 #define ALIGN_VALUE( val, alignment )	(( val + alignment - 1 ) & ~( alignment - 1 ))
