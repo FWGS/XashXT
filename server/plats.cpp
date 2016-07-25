@@ -2280,7 +2280,7 @@ void CFuncTrackChange :: Spawn( void )
 
 	EnableUse();
 	SetNextThink( 2.0f ); // let's train spawn
-	SetThink( &FuncTrackChange::Find );
+	SetThink( &CFuncTrackChange::Find );
 	Precache();
 }
 
@@ -2323,7 +2323,7 @@ void CFuncTrackChange :: KeyValue( KeyValueData *pkvd )
 void CFuncTrackChange::OverrideReset( void )
 {
 	SetMoveDoneTime( 1.0 );
-	SetMoveDone( &FuncTrackChange::Find );
+	SetMoveDone( &CFuncTrackChange::Find );
 }
 
 void CFuncTrackChange :: Find( void )

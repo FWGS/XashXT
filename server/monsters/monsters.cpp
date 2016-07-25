@@ -2111,7 +2111,7 @@ void CBaseMonster :: StartMonster ( void )
 
 	// Delay drop to floor to make sure each door in the level has had its chance to spawn
 	// Spread think times so that they don't all happen at the same time (Carmack)
-	SetThink( &CallMonsterThink );
+	SetThink( &CBaseMonster::CallMonsterThink );
 	pev->nextthink += RANDOM_FLOAT(0.1, 0.4); // spread think times.
 	
 	if ( !FStringNull(pev->targetname) )// wait until triggered
