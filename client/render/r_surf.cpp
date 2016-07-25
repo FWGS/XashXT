@@ -881,6 +881,7 @@ R_AddSurfaceLayers
 */
 void R_AddSurfaceLayers( msurface_t *fa )
 {
+	int maps;
 	texture_t	*t;
 	cl_entity_t *e = RI.currententity;
 	bool update_lightcache = false;
@@ -939,7 +940,7 @@ void R_AddSurfaceLayers( msurface_t *fa )
 	// because it's may be used e.g. for decals
 
 	// check for lightmap modification
-	for( int maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++ )
+	for( maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++ )
 	{
 		if( RI.lightstylevalue[fa->styles[maps]] != fa->cached_light[maps] )
 		{

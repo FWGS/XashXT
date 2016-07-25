@@ -435,7 +435,7 @@ but later we could replace some of them with some approximations or more
 clever stuff.
 */
 #ifndef __WIN32
-NX_INLINE static bool NxMath::isFinite(NxF32 x)
+NX_INLINE bool NxMath::isFinite(NxF32 x)
 {
     return !!isfinite(x);
 }

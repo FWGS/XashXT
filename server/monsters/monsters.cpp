@@ -2011,9 +2011,9 @@ void CBaseMonster :: MonsterInit ( void )
 	// create a monster collision box
 	m_pUserData = WorldPhysic->CreateBoxFromEntity( this );
 
-	SetThink( &MonsterInitThink );
+	SetThink( &CBaseMonster::MonsterInitThink );
 	SetNextThink( 0.1 );
-	SetUse( &MonsterUse );
+	SetUse( &CBaseMonster::MonsterUse );
 }
 
 //=========================================================
@@ -3413,7 +3413,7 @@ void CBaseMonster :: MonsterInitDead( void )
 
 	// Setup health counters, etc.
 	BecomeDead();
-	SetThink( &CorpseFallThink );
+	SetThink( &CBaseMonster::CorpseFallThink );
 	pev->nextthink = gpGlobals->time + 0.5;
 }
 

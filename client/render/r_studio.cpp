@@ -1267,6 +1267,7 @@ StudioMergeBones
 */
 void CStudioModelRenderer :: StudioMergeBones( model_t *m_pSubModel )
 {
+	int i, j;
 	mstudioanim_t	*panim;
 	matrix3x4		bonematrix;
 
@@ -1289,9 +1290,9 @@ void CStudioModelRenderer :: StudioMergeBones( model_t *m_pSubModel )
 
 	mstudiobone_t *pbones = (mstudiobone_t *)((byte *)m_pStudioHeader + m_pStudioHeader->boneindex);
 
-	for( int i = 0; i < m_pStudioHeader->numbones; i++ ) 
+	for( i = 0; i < m_pStudioHeader->numbones; i++ ) 
 	{
-		for( int j = 0; j < m_nCachedBones; j++ )
+		for( j = 0; j < m_nCachedBones; j++ )
 		{
 			if( !Q_stricmp( pbones[i].name, m_nCachedBoneNames[j] ))
 			{
@@ -1997,7 +1998,8 @@ bool CStudioModelRenderer::IsModelInstanceValid( word handle, bool skipDecals )
 //-----------------------------------------------------------------------------
 int CStudioModelRenderer::GetDecalMaterial( DecalModelList_t& decalList, int decalTexture )
 {
-	for( word j = decalList.m_FirstMaterial; j != m_DecalMaterial.InvalidIndex(); j = m_DecalMaterial.Next( j ))
+	word j;
+	for( j = decalList.m_FirstMaterial; j != m_DecalMaterial.InvalidIndex(); j = m_DecalMaterial.Next( j ))
 	{
 		if( m_DecalMaterial[j].decalTexture == decalTexture )
 		{
@@ -4476,7 +4478,7 @@ StudioRenderFinal
 */
 void CStudioModelRenderer::StudioRenderFinal(void)
 {
-	int rendermode = (m_nForceFaceFlags & STUDIO_NF_CHROME) ? kRenderTransAdd : m_pCurrentEntity->curstate.rendermode;
+	int i, rendermode = (m_nForceFaceFlags & STUDIO_NF_CHROME) ? kRenderTransAdd : m_pCurrentEntity->curstate.rendermode;
 
 	StudioSetupRenderer( rendermode );
 	
@@ -4490,7 +4492,7 @@ void CStudioModelRenderer::StudioRenderFinal(void)
 	}
 	else
 	{
-		for( int i = 0 ; i < m_pStudioHeader->numbodyparts; i++ )
+		for( i = 0 ; i < m_pStudioHeader->numbodyparts; i++ )
 		{
 			StudioSetupModel( i, (void **)&m_pBodyPart, (void **)&m_pSubModel );
 			StudioDrawPoints();
