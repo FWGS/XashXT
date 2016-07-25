@@ -852,13 +852,13 @@ int CRestore::ReadField( const void *pBaseData, DATAMAP *pMap, TYPEDESCRIPTION *
 					switch( pTest->fieldType )
 					{
 					case FIELD_TIME:
-						timeData = *(float *)pInputData;
+                        memcpy(&timeData, pInputData, 4);
 						// Re-base time variables
 						timeData += time;
-						*((float *)pOutputData) = timeData;
+                        memcpy(pOutputData, &timeData, 4);
 						break;
 					case FIELD_FLOAT:
-						*((float *)pOutputData) = *(float *)pInputData;
+                        memcpy(pOutputData, pInputData, 4);
 						break;
 					case FIELD_MODELNAME:
 					case FIELD_SOUNDNAME:
@@ -931,15 +931,19 @@ int CRestore::ReadField( const void *pBaseData, DATAMAP *pMap, TYPEDESCRIPTION *
 							*((EOFFSET *)pOutputData) = 0;
 						break;
 					case FIELD_VECTOR:
-						((float *)pOutputData)[0] = ((float *)pInputData)[0];
-						((float *)pOutputData)[1] = ((float *)pInputData)[1];
-						((float *)pOutputData)[2] = ((float *)pInputData)[2];
+                        memcpy(pOutputData, pInputData, sizeof( float ) * 3 );
 						break;
 					case FIELD_POSITION_VECTOR:
-						((float *)pOutputData)[0] = ((float *)pInputData)[0] + position.x;
-						((float *)pOutputData)[1] = ((float *)pInputData)[1] + position.y;
-						((float *)pOutputData)[2] = ((float *)pInputData)[2] + position.z;
-						break;
+                        float tmp;
+                        memcpy(&tmp, (char *)pInputData + 0, 4);
+                        tmp += position.x;
+                        memcpy((char *)pOutputData + 0, &tmp, 4);
+                        memcpy(&tmp, (char *)pInputData + 4, 4);
+                        tmp += position.y;
+                        memcpy((char *)pOutputData + 4, &tmp, 4);
+                        memcpy(&tmp, (char *)pInputData + 8, 4);
+                        tmp += position.z;
+                        memcpy((char *)pOutputData + 8, &tmp, 4);						break;
 					case FIELD_BOOLEAN:
 					case FIELD_INTEGER:
 						*((int *)pOutputData) = *( int *)pInputData;
