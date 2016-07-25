@@ -1195,7 +1195,10 @@ void R_DrawEntitiesOnList( void )
 
 	R_DrawParticles();
 
+    // GL_QUADS is unavailiable on GLES
+#ifndef __ANDROID__
 	R_DrawWeather();
+#endif
 
 	// NOTE: some mods with custom renderer may generate glErrors
 	// so we clear it here

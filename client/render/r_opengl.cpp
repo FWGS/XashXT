@@ -848,6 +848,7 @@ bool R_Init( void )
         return false;
     }
 #endif
+    R_BuildQuadIndex();
 	GL_SetDefaultState();
 	GL_InitExtensions();
 	GL_InitPrograms();

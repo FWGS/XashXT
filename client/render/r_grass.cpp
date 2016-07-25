@@ -24,7 +24,22 @@ GNU General Public License for more details.
 grasshdr_t		*grasschain[3];
 grassvert_t		grassverts[GRASS_VERTS];
 grasstex_t		grasstexs[GRASS_TEXTURES];
+unsigned short grassindex[GRASS_VERTS / 2 * 3];
 CUtlArray<grasspinfo_t>	grassInfo;
+
+void R_BuildQuadIndex()
+{
+    unsigned short *pIndex = grassindex;
+    for( int i = 0; i < GRASS_VERTS; i += 4 )
+    {
+        *pIndex++ = i;
+        *pIndex++ = i + 3;
+        *pIndex++ = i + 1;
+        *pIndex++ = i + 1;
+        *pIndex++ = i + 3;
+        *pIndex++ = i + 2;
+    }
+}
 
 /*
 ================
@@ -609,6 +624,11 @@ void R_DrawGrass( int pass )
 	int nexttex = 0;
 	int curtex = 0;
 	int cn = 0;
+    unsigned short *pIndex;
+// GL_QUADS
+#ifdef __ANDROID__
+    //return;
+#endif
 
 	float fadestart = r_grass_fade_start->value;
 
@@ -684,6 +704,7 @@ void R_DrawGrass( int pass )
 		numverts = 0;
 		curtex = nexttex;
 		grasspos = grassverts;
+        pIndex = grassindex;
 
 		if( pass != GRASS_PASS_LIGHT && pass != GRASS_PASS_FOG )
 			GL_Bind( GL_TEXTURE0, grasstexs[curtex].gl_texturenum );
@@ -746,13 +767,15 @@ void R_DrawGrass( int pass )
 				}
 				
 				memcpy( grasspos, grass->mesh, sizeof( grassvert_t ) * 16 );
+
 				grasspos += 16;
 				numverts += 16;
 				
 				if( numverts == GRASS_VERTS )
 				{
 					r_stats.c_grass_polys += (numverts / 4);
-					pglDrawArrays( GL_QUADS, 0, numverts );
+                    //pglDrawArrays( GL_QUADS, 0, numverts );
+                    pglDrawElements( GL_TRIANGLES, numverts / 2 * 3, GL_UNSIGNED_SHORT, grassindex );
 					grasspos = grassverts;
 					numverts = 0;
 				}
@@ -762,8 +785,9 @@ void R_DrawGrass( int pass )
 		// flush all remaining vertices
 		if( numverts )
 		{
-			r_stats.c_grass_polys += (numverts / 4);
-			pglDrawArrays( GL_QUADS, 0, numverts );
+            r_stats.c_grass_polys += (numverts / 4);
+            //pglDrawArrays( GL_QUADS, 0, numverts );
+            pglDrawElements( GL_TRIANGLES, numverts / 2 * 3, GL_UNSIGNED_SHORT, grassindex );
 		}
 	} while( curtex != nexttex );
 
