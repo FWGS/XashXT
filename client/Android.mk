@@ -15,7 +15,7 @@ endif
 
 # Xash doesn't have any voice chat, so remove it from gamedll too.
 LOCAL_CFLAGS += -D_LINUX -DCLIENT_WEAPONS -DNO_VOICEGAMEMGR -Dstricmp=strcasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf \
-	-fno-exceptions -Wextra -Wno-write-strings -fpermissive -DNX32 -DLINUX -DCLIENT_DLL=1 -fsigned-char
+	-fno-exceptions -Wextra -Wno-write-strings -DNX32 -DLINUX -DCLIENT_DLL=1 -fsigned-char
 
 LOCAL_CPPFLAGS := $(LOCAL_CFLAGS) -frtti
 
