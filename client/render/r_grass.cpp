@@ -24,23 +24,31 @@ GNU General Public License for more details.
 grasshdr_t		*grasschain[3];
 grassvert_t		grassverts[GRASS_VERTS];
 grasstex_t		grasstexs[GRASS_TEXTURES];
-unsigned short grassindex[GRASS_VERTS / 2 * 3];
-CUtlArray<grasspinfo_t>	grassInfo;
 
+CUtlArray<grasspinfo_t>	grassInfo;
+#ifdef XASH_GLES
+unsigned short grassindex[GRASS_VERTS / 2 * 3];
+/*
+===============
+R_BuildQuadIndex
+
+Build index that allows draw GL_QUADS array as GL_TRIANGLES
+===============
+*/
 void R_BuildQuadIndex()
 {
-    unsigned short *pIndex = grassindex;
-    for( int i = 0; i < GRASS_VERTS; i += 4 )
-    {
-        *pIndex++ = i;
-        *pIndex++ = i + 3;
-        *pIndex++ = i + 1;
-        *pIndex++ = i + 1;
-        *pIndex++ = i + 3;
-        *pIndex++ = i + 2;
-    }
+	unsigned short *pIndex = grassindex;
+	for( int i = 0; i < GRASS_VERTS; i += 4 )
+	{
+		*pIndex++ = i;
+		*pIndex++ = i + 3;
+		*pIndex++ = i + 1;
+		*pIndex++ = i + 1;
+		*pIndex++ = i + 3;
+		*pIndex++ = i + 2;
+	}
 }
-
+#endif
 /*
 ================
 R_ReLightGrass
@@ -108,7 +116,7 @@ void R_ReLightGrass( msurface_t *surf, bool force )
 					*(int *)g->mesh[j].c = *(int *)g->color;
 			}
 
-			// NOTE: 'maps' used twice but is no matter because we breaking main cycle 				
+			// NOTE: 'maps' used twice but is no matter because we breaking main cycle
 			for( maps = 0; maps < MAXLIGHTMAPS && surf->styles[maps] != 255; maps++ )
 				hdr->cached_light[maps] = RI.lightstylevalue[surf->styles[maps]];
 
@@ -146,7 +154,7 @@ void R_AddGrass( grasspinfo_t *ppinfo )
 		}
 	}
 
-	if( !stex ) 
+	if( !stex )
 	{
 		ALERT( at_warning, "Invalid world texture in grass info: \"%s\"\n", ppinfo->stex );
 		return;
@@ -168,7 +176,7 @@ void R_AddGrass( grasspinfo_t *ppinfo )
 
 			break;
 		}
-		else if( !Q_stricmp( gtex->name, ppinfo->gtex )) 
+		else if( !Q_stricmp( gtex->name, ppinfo->gtex ))
 			break;
 	}
 
@@ -288,7 +296,7 @@ void R_ConstructGrass( msurface_t *psurf )
 			// begin build the grass
 			Vector size = (es->maxs - es->mins);
 			int count = GRASS_DENSITY( size, ppinfo->density );
-			if( !count ) continue; // skip to next grass definition for this surface (if present) 
+			if( !count ) continue; // skip to next grass definition for this surface (if present)
 
 			hdr = es->grass;
 
@@ -313,7 +321,7 @@ void R_ConstructGrass( msurface_t *psurf )
 					g->mesh = (grassvert_t *)ptr;
 					ptr += mesh_size;
 				}
-                              }
+							  }
 
 			// update random set to get predictable positions for grass 'random' placement
 			RANDOM_SEED( ppinfo->seed );
@@ -332,8 +340,8 @@ void R_ConstructGrass( msurface_t *psurf )
 
 				for( int k = 0; k < count; k++ )
 				{
-					float a = RANDOM_FLOAT( 0.0f, 1.0f ); 
-					float b = RANDOM_FLOAT( 0.0f, 1.0f ); 
+					float a = RANDOM_FLOAT( 0.0f, 1.0f );
+					float b = RANDOM_FLOAT( 0.0f, 1.0f );
 
 					if(( a + b ) > 1.0f )
 					{
@@ -391,7 +399,7 @@ void R_ParseGrassFile( void )
 	Q_snprintf( file, sizeof( file ), "%s_grass.txt", mapname );
 	ALERT( at_aiconsole, "Load grass info file %s\n", file );
 	afile = (char *)gEngfuncs.COM_LoadFile( file, 5, NULL );
-	
+
 	if( afile )
 	{
 		grasspinfo_t pinfo;
@@ -456,8 +464,8 @@ void R_AddToGrassChain( msurface_t *surf, const mplane_t frustum[6], unsigned in
 	grasshdr_t *grass = es->grass;
 
 	qboolean shadowpass = RI.params & RP_SHADOWVIEW;
-	
-	if( !r_grass->value || ( shadowpass && !r_grass_shadows->value ) || ( !shadowpass && lightpass && !r_grass_lighting->value )) 
+
+	if( !r_grass->value || ( shadowpass && !r_grass_shadows->value ) || ( !shadowpass && lightpass && !r_grass_lighting->value ))
 		return;
 
 	float draw_dist = r_grass_fade_start->value;
@@ -491,7 +499,7 @@ void R_AddToGrassChain( msurface_t *surf, const mplane_t frustum[6], unsigned in
 
 			if( shadowpass || ( RI.params & RP_MIRRORVIEW ))
 				grass->dist = ( r_lastRefdef.vieworg - es->origin ).Length();
-			else grass->dist = ( RI.vieworg - es->origin ).Length();		
+			else grass->dist = ( RI.vieworg - es->origin ).Length();
 		}
 
 		cl_entity_t *e = RI.currententity;
@@ -525,7 +533,7 @@ void R_AddToGrassChain( msurface_t *surf, const mplane_t frustum[6], unsigned in
 			{
 				grass->chain[2] = grasschain[2];
 				grasschain[2] = grass;
-				
+
 				if( grass->renderframe != tr.grassframecount )
 				{
 					grass->chain[1] = grasschain[1];
@@ -624,23 +632,18 @@ void R_DrawGrass( int pass )
 	int nexttex = 0;
 	int curtex = 0;
 	int cn = 0;
-    unsigned short *pIndex;
-// GL_QUADS
-#ifdef __ANDROID__
-    //return;
-#endif
 
 	float fadestart = r_grass_fade_start->value;
 
-	if( fadestart < GRASS_ANIM_DIST ) 
+	if( fadestart < GRASS_ANIM_DIST )
 		fadestart = GRASS_ANIM_DIST;
 
 	float fadedist = abs( r_grass_fade_dist->value );
 	float fadeend = fadestart + fadedist;
 
-	if( pass == GRASS_PASS_AMBIENT ) 
+	if( pass == GRASS_PASS_AMBIENT )
 		cn = 1;
-	else if( pass == GRASS_PASS_LIGHT ) 
+	else if( pass == GRASS_PASS_LIGHT )
 		cn = 2;
 
 	if( !grasschain[cn] )
@@ -660,7 +663,7 @@ void R_DrawGrass( int pass )
 	else if( pass == GRASS_PASS_NORMAL )
 	{
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
-		R_SetupOverbright( true );	
+		R_SetupOverbright( true );
 	}
 	else if( pass == GRASS_PASS_DIFFUSE )
 	{
@@ -699,12 +702,11 @@ void R_DrawGrass( int pass )
 
 	float time = GET_CLIENT_TIME();
 
-	do 
+	do
 	{
 		numverts = 0;
 		curtex = nexttex;
 		grasspos = grassverts;
-        pIndex = grassindex;
 
 		if( pass != GRASS_PASS_LIGHT && pass != GRASS_PASS_FOG )
 			GL_Bind( GL_TEXTURE0, grasstexs[curtex].gl_texturenum );
@@ -732,7 +734,7 @@ void R_DrawGrass( int pass )
 				if( chain->scale != scale )
 				{
 					resize = true;
-					chain->scale = scale;	
+					chain->scale = scale;
 				}
 			}
 			else if(( chain->animtime < time ) || ( chain->animtime > ( time + GRASS_ANIM_TIME * 2.0f )))
@@ -741,7 +743,7 @@ void R_DrawGrass( int pass )
 				chain->scale = 0.0f;
 				chain->animtime = time + GRASS_ANIM_TIME;
 			}
-			
+
 			grass_t *grass = chain->g;
 			int grasstex = grass->texture;
 
@@ -765,17 +767,21 @@ void R_DrawGrass( int pass )
 
 					continue;
 				}
-				
+
 				memcpy( grasspos, grass->mesh, sizeof( grassvert_t ) * 16 );
 
 				grasspos += 16;
 				numverts += 16;
-				
+
 				if( numverts == GRASS_VERTS )
 				{
 					r_stats.c_grass_polys += (numverts / 4);
-                    //pglDrawArrays( GL_QUADS, 0, numverts );
-                    pglDrawElements( GL_TRIANGLES, numverts / 2 * 3, GL_UNSIGNED_SHORT, grassindex );
+#ifdef XASH_GLES
+					//  GL ES does not support GL_QUADS
+					pglDrawElements( GL_TRIANGLES, numverts / 2 * 3, GL_UNSIGNED_SHORT, grassindex );
+#else
+					pglDrawArrays( GL_QUADS, 0, numverts );
+#endif
 					grasspos = grassverts;
 					numverts = 0;
 				}
@@ -785,9 +791,13 @@ void R_DrawGrass( int pass )
 		// flush all remaining vertices
 		if( numverts )
 		{
-            r_stats.c_grass_polys += (numverts / 4);
-            //pglDrawArrays( GL_QUADS, 0, numverts );
-            pglDrawElements( GL_TRIANGLES, numverts / 2 * 3, GL_UNSIGNED_SHORT, grassindex );
+			r_stats.c_grass_polys += (numverts / 4);
+#ifdef XASH_GLES
+					//  GL ES does not support GL_QUADS
+					pglDrawElements( GL_TRIANGLES, numverts / 2 * 3, GL_UNSIGNED_SHORT, grassindex );
+#else
+					pglDrawArrays( GL_QUADS, 0, numverts );
+#endif
 		}
 	} while( curtex != nexttex );
 
@@ -795,13 +805,13 @@ void R_DrawGrass( int pass )
 	pglDisableClientState( GL_VERTEX_ARRAY );
 	pglDisableClientState( GL_TEXTURE_COORD_ARRAY );
 
-	if( pass != GRASS_PASS_LIGHT ) 
+	if( pass != GRASS_PASS_LIGHT )
 		pglDisable( GL_ALPHA_TEST );
 	if( pass != GRASS_PASS_NORMAL && pass != GRASS_PASS_DIFFUSE )
 		grasschain[cn] = NULL;
 	else R_SetupOverbright( false );
 
-	if( pass == GRASS_PASS_SHADOW ) 
+	if( pass == GRASS_PASS_SHADOW )
 		pglDisable( GL_TEXTURE_2D );
 	else if( pass == GRASS_PASS_DIFFUSE )
 	{
@@ -815,8 +825,8 @@ void R_DrawGrass( int pass )
 		// PASS_FOG is always last, so nothing to draw
 		memset( grasschain, 0, sizeof( grasschain ));
 	}
-	
+
 	GL_Cull( GL_FRONT );
-	pglAlphaFunc( GL_GEQUAL, 0.5f );	
+	pglAlphaFunc( GL_GEQUAL, 0.5f );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 }
