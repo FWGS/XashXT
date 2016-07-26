@@ -197,7 +197,7 @@ public:
 	{
 		for( int i = 0; i < m_Names.Count(); i++ )
 		{
-			delete m_Names[i];
+            delete[] m_Names[i];
 		}
 	}
 	

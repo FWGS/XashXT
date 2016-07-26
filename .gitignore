@@ -26,3 +26,7 @@
 *.app
 *.o
 *.so
+*.apk
+android/obj
+android/bin
+android/libs

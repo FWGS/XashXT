@@ -514,7 +514,7 @@ private:
 	Vector2D			m_arraycoord[MAXARRAYVERTS];
 	byte			m_vertexbone[MAXARRAYVERTS];
 	byte			m_arraycolor[MAXARRAYVERTS][4];
-	unsigned int		m_arrayelems[MAXARRAYVERTS*6];
+    unsigned short		m_arrayelems[MAXARRAYVERTS*6];
 	unsigned int		m_nNumArrayVerts;
 	unsigned int		m_nNumArrayElems;
 

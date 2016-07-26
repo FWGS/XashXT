@@ -94,5 +94,5 @@ extern void R_DrawGrass( int pass );
 extern void R_ParseGrassFile( void );
 extern void R_ReLightGrass( msurface_t *surf, bool force = false );
 extern void R_AddToGrassChain( msurface_t *surf, const mplane_t frustum[6], unsigned int clipflags, qboolean lightpass );
-
+extern void R_BuildQuadIndex();
 #endif//R_GRASS_H

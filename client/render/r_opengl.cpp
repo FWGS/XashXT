@@ -444,7 +444,7 @@ void GL_CheckExtension( const char *name, const dllfunc_t *funcs, int r_ext )
 		if(!(*func->func = (void *)GL_GetProcAddress( func->name )))
         {
 			GL_SetExtension( r_ext, false ); // one or more functions are invalid, extension will be disabled
-            ALERT( at_aiconsole, "WARNING: %s - ^1missing\n", func->name );
+			ALERT( at_aiconsole, "WARNING: %s - ^1missing\n", func->name );
         }
     }
 
@@ -520,9 +520,13 @@ static void GL_InitExtensions( void )
 	// point particles extension
 	GL_CheckExtension( "GL_EXT_point_parameters", pointparametersfunc, R_EXT_POINTPARAMETERS );
 
+#ifdef __ANDROID__
+	GL_CheckExtension( "GL_OES_texture_npot", NULL, R_ARB_TEXTURE_NPOT_EXT );
+#else
 	GL_CheckExtension( "GL_ARB_texture_non_power_of_two", NULL, R_ARB_TEXTURE_NPOT_EXT );
+#endif
 	GL_CheckExtension( "GL_ARB_texture_compression", texturecompressionfuncs, R_TEXTURE_COMPRESSION_EXT );
-    GL_CheckExtension( "glDrawArrays", compiledvertexarrayfuncs, R_CUSTOM_VERTEX_ARRAY_EXT );
+	GL_CheckExtension( "glDrawArrays", compiledvertexarrayfuncs, R_CUSTOM_VERTEX_ARRAY_EXT );
 
 	if( !GL_Support( R_CUSTOM_VERTEX_ARRAY_EXT ))
 		GL_CheckExtension( "GL_SGI_compiled_vertex_array", compiledvertexarrayfuncs, R_CUSTOM_VERTEX_ARRAY_EXT );
@@ -596,7 +600,7 @@ static void GL_InitExtensions( void )
 
 	// FBO support
 #ifdef __ANDROID__
-    GL_CheckExtension( "GL_OES_framebuffer_object", arbfbofuncs, R_FRAMEBUFFER_OBJECT );
+	GL_CheckExtension( "GL_OES_framebuffer_object", arbfbofuncs, R_FRAMEBUFFER_OBJECT );
 #else
 	GL_CheckExtension( "GL_ARB_framebuffer_object", arbfbofuncs, R_FRAMEBUFFER_OBJECT );
 #endif
@@ -829,20 +833,24 @@ bool R_Init( void )
 		return false;
 	}
 #elif defined __ANDROID__
-    // libxash.so exports nanogl wrapper functions
-    if( !Sys_LoadLibrary( "*libxash.so", &opengl_dll ))
-    {
-        g_fRenderInitialized = FALSE;
-        ALERT( at_aiconsole, "Failed to load opengl library!\n" );
-        return false;
-    }
+	// libxash.so exports nanogl wrapper functions
+	if( !Sys_LoadLibrary( "*libxash.so", &opengl_dll ))
+	{
+		g_fRenderInitialized = FALSE;
+		ALERT( at_aiconsole, "Failed to load opengl library!\n" );
+		return false;
+	}
 #else
-    if( !Sys_LoadLibrary( "*libGL.so.1", &opengl_dll ))
+	if( !Sys_LoadLibrary( "*libGL.so.1", &opengl_dll ))
     {
         g_fRenderInitialized = FALSE;
         ALERT( at_aiconsole, "Failed to load opengl library!\n" );
         return false;
-    }
+	}
+#endif
+
+#ifdef XASH_GLES
+	R_BuildQuadIndex();
 #endif
 	GL_SetDefaultState();
 	GL_InitExtensions();
@@ -860,6 +868,13 @@ bool R_Init( void )
 
 void R_VidInit( void )
 {
+
+	// Disable fbo extension by cvar
+	// It is badly implemented somewhere
+	if( GL_Support( R_FRAMEBUFFER_OBJECT ) )
+		if( !r_use_fbo->value )
+			GL_SetExtension( R_FRAMEBUFFER_OBJECT, false );
+
 	R_NewMap ();
 }
 

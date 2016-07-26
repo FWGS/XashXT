@@ -1195,7 +1195,11 @@ void R_DrawEntitiesOnList( void )
 
 	R_DrawParticles();
 
-	R_DrawWeather();
+	// GL_QUADS is unavailiable on GLES
+#ifndef XASH_GLES
+	if( r_allow_weather->value )
+		R_DrawWeather();
+#endif
 
 	// NOTE: some mods with custom renderer may generate glErrors
 	// so we clear it here

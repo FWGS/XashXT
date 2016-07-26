@@ -45,6 +45,7 @@ extern cvar_t	*r_allow_static;
 extern cvar_t	*r_allow_mirrors;
 extern cvar_t	*r_allow_portals;
 extern cvar_t	*r_allow_screens;
+extern cvar_t	*r_allow_weather;
 extern cvar_t	*r_faceplanecull;
 extern cvar_t	*r_detailtextures;
 extern cvar_t	*r_lighting_ambient;
@@ -66,5 +67,6 @@ extern cvar_t	*r_grass_fade_start;
 extern cvar_t	*r_grass_fade_dist;
 extern cvar_t	*r_overbright;
 extern cvar_t	*r_skyfog;
+extern cvar_t	*r_use_fbo;
 
 #endif//R_CVARS_H

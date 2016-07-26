@@ -84,6 +84,8 @@ cvar_t	*r_grass_fade_start;
 cvar_t	*r_grass_fade_dist;
 cvar_t	*r_overbright;
 cvar_t	*r_skyfog;
+cvar_t	*r_use_fbo;
+cvar_t	*r_allow_weather;
 
 cvar_t	v_iyaw_cycle	= { "v_iyaw_cycle", "2", 0, 2 };
 cvar_t	v_iroll_cycle	= { "v_iroll_cycle", "0.5", 0, 0.5 };
@@ -164,6 +166,8 @@ void V_Init( void )
 	r_lightstyle_lerping= CVAR_GET_POINTER( "cl_lightstyle_lerping" );
 	r_lighting_extended	= CVAR_GET_POINTER( "r_lighting_extended" );
 
+	r_allow_weather = CVAR_REGISTER( "r_allow_weather", "1", FCVAR_ARCHIVE );
+	r_use_fbo = CVAR_REGISTER( "r_use_fbo", "1", FCVAR_ARCHIVE );
 	cl_vsmoothing	= CVAR_REGISTER( "cl_vsmoothing", "0.05", FCVAR_ARCHIVE );
 	r_allow_portals	= CVAR_REGISTER( "gl_allow_portals", "1", FCVAR_ARCHIVE|FCVAR_CLIENTDLL );
 	r_allow_screens	= CVAR_REGISTER( "gl_allow_screens", "1", FCVAR_ARCHIVE|FCVAR_CLIENTDLL );
@@ -283,7 +287,7 @@ mlook and mouse, or klook and keyboard, pitch drifting is constantly stopped.
 */
 void V_DriftPitch( struct ref_params_s *pparams )
 {
-    return;
+	return;
 	if( gEngfuncs.IsNoClipping() || !pparams->onground || pparams->demoplayback )
 	{
 		pd.driftmove = 0;
@@ -1023,8 +1027,8 @@ void V_CalcGlobalFog( struct ref_params_s *pparams )
 //==========================
 void V_CalcRefdef( struct ref_params_s *pparams )
 {
-    //pause = pparams->paused;
-    //if( pause ) return;
+	//pause = pparams->paused;
+	//if( pause ) return;
 
 	if( pparams->intermission )
 	{
