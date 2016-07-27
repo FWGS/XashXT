@@ -594,7 +594,7 @@ template < class T, class I, typename L, class M >
 inline typename CUtlRBTree<T, I, L, M>::Links_t const &CUtlRBTree<T, I, L, M>::Links( I i ) const 
 {
 	// Sentinel node, makes life easier
-	static Links_t s_Sentinel = 
+	Links_t s_Sentinel = 
 	{ 
 		InvalidIndex(), InvalidIndex(), InvalidIndex(), CUtlRBTree<T, I, L, M>::BLACK 
 	};
