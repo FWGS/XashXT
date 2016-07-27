@@ -17,6 +17,10 @@
 #include "utlfixedmemory.h"
 #include "utlblockmemory.h"
 
+#define max( a, b )                 (((a) > (b)) ? (a) : (b))
+#define min( a, b )                 (((a) < (b)) ? (a) : (b))
+
+
 //-----------------------------------------------------------------------------
 // Tool to generate a default compare function for any type that implements
 // operator<, including all simple types
