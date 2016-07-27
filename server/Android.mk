@@ -15,7 +15,7 @@ endif
 
 # Xash doesn't have any voice chat, so remove it from gamedll too.
 LOCAL_CFLAGS += -D_LINUX -DCLIENT_WEAPONS -DNO_VOICEGAMEMGR -Dstricmp=strcasecmp -Dstrnicmp=strncasecmp -D_snprintf=snprintf \
-	-fno-exceptions -Wextra -Wno-write-strings -fpermissive -DNX32 -DLINUX -fsigned-char
+	-fno-exceptions -Wextra -Wno-write-strings -DNX32 -DLINUX -fsigned-char
 
 LOCAL_CPPFLAGS := $(LOCAL_CFLAGS) -frtti
 
@@ -124,7 +124,6 @@ SRCS += ./strings.cpp
 SRCS += ./subs.cpp
 SRCS += ./monsters/talkmonster.cpp
 SRCS += ./teamplay_gamerules.cpp
-SRCS += ./monsters/tempmonster.cpp
 SRCS += ./monsters/tentacle.cpp
 #SRCS += ./physics/trace.cpp
 SRCS += ./triggers.cpp

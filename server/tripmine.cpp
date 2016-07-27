@@ -109,7 +109,7 @@ void CTripmineGrenade :: Spawn( void )
 		m_flPowerUp = gpGlobals->time + 2.5;
 	}
 
-	SetThink( &PowerupThink );
+	SetThink( &CTripmineGrenade::PowerupThink );
 	SetNextThink( 0.2 );
 
 	pev->takedamage = DAMAGE_YES;
@@ -251,7 +251,7 @@ void CTripmineGrenade :: MakeBeam( void )
 	UTIL_TraceLine( vecSrc, vecEnd, dont_ignore_monsters, edict(), &tr );
 
 	// set to follow laser spot
-	SetThink( &BeamBreakThink );
+	SetThink( &CTripmineGrenade::BeamBreakThink );
 	SetNextThink( 0.1 );
 
 	m_pBeam = CBeam::BeamCreate( g_pModelNameLaser, 10 );
@@ -327,7 +327,7 @@ int CTripmineGrenade :: TakeDamage( entvars_t *pevInflictor, entvars_t *pevAttac
 {
 	if (gpGlobals->time < m_flPowerUp && flDamage < pev->health)
 	{
-		SetThink( &SUB_Remove );
+		SetThink( &CBaseEntity::SUB_Remove );
 		pev->nextthink = gpGlobals->time + 0.1;
 		KillBeam();
 		return FALSE;
@@ -345,7 +345,7 @@ void CTripmineGrenade::Killed( entvars_t *pevAttacker, int iGib )
 		pev->owner = ENT( pevAttacker );
 	}
 
-	SetThink( &DelayDeathThink );
+	SetThink( &CTripmineGrenade::DelayDeathThink );
 	pev->nextthink = gpGlobals->time + RANDOM_FLOAT( 0.1, 0.3 );
 
 	EMIT_SOUND( ENT(pev), CHAN_BODY, "common/null.wav", 0.5, ATTN_NORM ); // shut off chargeup
@@ -445,7 +445,7 @@ void CTripmine::Holster( void )
 	{
 		// out of mines
 		m_pPlayer->pev->weapons &= ~(1<<WEAPON_TRIPMINE);
-		SetThink( &DestroyItem );
+		SetThink( &CBasePlayerItem::DestroyItem );
 		pev->nextthink = gpGlobals->time + 0.1;
 	}
 
