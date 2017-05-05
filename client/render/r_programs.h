@@ -168,4 +168,160 @@ const char fp_liquid_source[ ] =
 "MAD result.color.w, R0.w, 0.8, 0.1;\n"
 "END\n";
 
+const char *shader1_v = "\
+uniform vec3 p1;\
+\
+void main()\
+{\
+	vec4 v1=ftransform();\
+	gl_Position=v1;\
+	gl_TexCoord[0]=v1;\
+	gl_TexCoord[1].xy=gl_MultiTexCoord0.xy;\
+	gl_TexCoord[2].xyz=p1-gl_Vertex.xyz;\
+}";
+
+const char *shader1_f = "\
+#extension GL_ARB_texture_rectangle : enable\n\
+uniform vec3 p2;\
+uniform vec4 p3;\
+uniform sampler2D tx1;\
+uniform sampler2D tx2;\
+uniform sampler2DRect tx3;\
+\
+void main()\
+{\
+	vec3 v1=normalize(gl_TexCoord[2]).xyz;\
+	vec3 v2=normalize(texture2D(tx2,gl_TexCoord[1].xy)*2.0-1.0).xyz;\
+	vec2 v3=(gl_TexCoord[0].xy/gl_TexCoord[0].w).xy*vec2(-0.5,0.5)+0.5;\
+	vec3 v4=texture2D(tx1,v3+v2.xy/p2.xy*p2.z).xyz;\
+	vec3 v5=texture2DRect(tx3,gl_FragCoord.xy+v2.xy*p2.z).xyz*p3.xyz;\
+	float v6=clamp(dot(v1,v2)+p3.w,0.0,1.0);\
+	gl_FragColor=vec4(mix(v4,v5,v6),1.0);\
+}";
+
+const char *shader2_v = "\
+void main()\
+{\
+	gl_TexCoord[0]=gl_MultiTexCoord0;\
+	gl_Position=ftransform();\
+}";
+
+const char *shader2_f = "\
+#extension GL_ARB_texture_rectangle : enable\n\
+uniform float p1;\
+uniform sampler2D tx1;\
+uniform sampler2D tx2;\
+uniform sampler2DRect tx3;\
+\
+void main()\
+{\
+	vec3 v1=texture2D(tx1,gl_TexCoord[0].xy).xyz;\
+	vec3 v2=normalize(texture2D(tx2,gl_TexCoord[0].xy)*2.0-1.0).xyz;\
+	vec3 v3=texture2DRect(tx3,gl_FragCoord.xy+v2.xy*p1).xyz;\
+	gl_FragColor=vec4(v3*v1*2.0,1.0);\
+}";
+
+const char *shader3_4_v = "\
+uniform vec3 p1;\
+attribute vec2 a1;\
+attribute vec2 a2;\
+attribute vec3 a3;\
+attribute vec3 a4;\
+attribute vec3 a5;\
+\
+void main()\
+{\
+	vec3 v1=gl_Vertex.xyz-p1;\
+	gl_TexCoord[0].xy=a1;\
+	gl_TexCoord[1].xy=a2;\
+	gl_TexCoord[2].x=-dot(v1,a3);\
+	gl_TexCoord[2].y=-dot(v1,a4);\
+	gl_TexCoord[2].z=dot(v1,a5);\
+	gl_Position=ftransform();\
+}";
+
+const char *shader3_f = "\
+uniform vec3 p2;\
+uniform sampler2D tx1;\
+uniform sampler2D tx2;\
+uniform sampler2D tx3;\
+uniform sampler2D tx4;\
+\
+void main()\
+{\
+	vec3 v1=normalize(gl_TexCoord[2].xyz);\
+	vec2 v2=gl_TexCoord[0].xy+(texture2D(tx3,gl_TexCoord[0].xy).a*2.0-1.0)*v1.xy*p2.x;\
+	vec3 v3=normalize(texture2D(tx3,v2).xyz*2.0-1.0);\
+	vec3 v4=normalize(texture2D(tx2,gl_TexCoord[1].xy).xyz*2.0-1.0);\
+	vec3 v5=texture2D(tx4,v2).xyz*pow(clamp(dot(reflect(-v1,v3.xzy),v4),0.0,1.0),p2.y);\
+	v4[2]=0.5;float v6=dot(v3,v4);\
+	gl_FragColor.xyz=texture2D(tx1,gl_TexCoord[1].xy).xyz*(max(v6,p2.z)*2.0+v5);\
+}";
+
+const char *shader4_f = "\
+uniform float p2;\
+uniform sampler2D tx1;\
+uniform sampler2D tx2;\
+uniform sampler2D tx3;\
+\
+void main()\
+{\
+	vec3 v1=normalize(gl_TexCoord[2].xyz);\
+	vec2 v2=gl_TexCoord[0].xy+(texture2D(tx2,gl_TexCoord[0].xy).a*2.0-1.0)*v1.xy*p2;\
+	gl_FragColor=texture2D(tx1,v2)*texture2D(tx3,v2)*2.0;\
+}";
+
+const char *shader5_v = "\
+void main()\
+{\
+	vec4 v1=gl_ModelViewMatrix*gl_Vertex;\
+	gl_TexCoord[0].x=dot(v1,gl_EyePlaneS[0]);\
+	gl_TexCoord[0].y=dot(v1,gl_EyePlaneT[0]);\
+	gl_TexCoord[0].z=dot(v1,gl_EyePlaneS[1]);\
+	gl_FrontColor.xyz=gl_Color.xyz;\
+	gl_Position=ftransform();\
+}";
+
+const char *shader5_f = "\
+uniform sampler2D tx1;\
+uniform sampler2D tx2;\
+\
+void main()\
+{\
+	gl_FragColor=vec4(gl_Color.xyz,texture2D(tx1,gl_TexCoord[0].xy).a*texture2D(tx2,vec2(gl_TexCoord[0].z,0.5)).a);\
+}";
+
+const char *shader6_v = "\
+uniform vec4 p1;\
+uniform vec4 p2;\
+\
+void main()\
+{\
+	vec3 v1=gl_Vertex.xyz-p1.xyz;\
+	vec3 v2=gl_Vertex.xyz-p2.xyz;\
+	gl_TexCoord[0]=gl_MultiTexCoord0;\
+	gl_TexCoord[1]=gl_MultiTexCoord1;\
+	gl_TexCoord[2].x=-dot(v1,gl_MultiTexCoord2.xyz);\
+	gl_TexCoord[2].y=-dot(v1,gl_MultiTexCoord3.xyz);\
+	gl_TexCoord[2].z=dot(v1,gl_Normal.xyz);\
+	gl_TexCoord[3].x=-dot(v2,gl_MultiTexCoord2.xyz);\
+	gl_TexCoord[3].y=-dot(v2,gl_MultiTexCoord3.xyz);\
+	gl_TexCoord[3].z=dot(v2,gl_Normal.xyz);\
+	gl_TexCoord[3].xyz = v2;\
+	gl_Position=ftransform();\
+}";
+
+const char *shader6_f = "\
+uniform vec4 p2;\
+uniform vec3 p3;\
+uniform sampler2D tx1;\
+uniform sampler2D tx2;\
+uniform sampler2D tx3;\
+\
+void main()\
+{\
+	float v1=length(gl_TexCoord[3].xyz)/p2.w;\
+	float v2=1.0-v1*v1;\
+	gl_FragColor=vec4(p3.xyz,v2);\
+}";
 #endif//R_PROGRAMS_H

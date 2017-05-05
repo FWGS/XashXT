@@ -77,7 +77,9 @@ typedef struct texture_s
 	unsigned short	fb_texturenum;	// auto-luma texturenum
 	unsigned short	dt_texturenum;	// detail-texture binding
 	struct mextrasurf_s	*lightchain;	// used for drawing spotlights
-	unsigned int	unused[2];	// reserved 
+	unsigned short nm_texturenum;
+	unsigned short sm_texturenum;
+	unsigned int unused;
 } texture_t;
 
 typedef struct
@@ -241,7 +243,8 @@ typedef struct mextrasurf_s
 	struct mextrasurf_s	*chromechain;	// for chrome-effect drawing
 	struct grasshdr_s	*grass;
 	int		grasscount;	// number of bushes for this poly
-	int		reserved[26];	// just for future expansions or mod-makers
+	float	*bumpdata;
+	int		reserved[25];	// just for future expansions or mod-makers
 } mextrasurf_t;
 
 typedef struct hull_s

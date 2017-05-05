@@ -170,7 +170,7 @@ R_BeginDrawProjection
 Setup texture matrix for light texture
 ================
 */
-void R_BeginDrawProjection( const plight_t *pl, bool decalPass )
+void R_BeginDrawProjection( const plight_t *pl, bool decalPass, bool bump )
 {
 	GLfloat	genVector[4][4];
 
@@ -197,6 +197,41 @@ void R_BeginDrawProjection( const plight_t *pl, bool decalPass )
 		else pglDepthFunc( GL_EQUAL );
 	}
 
+	glState.drawProjection = true;
+
+	if( R_BUMP && bump && pl->pointlight )
+	{
+		GL_Bind( GL_TEXTURE0, pl->projectionTexture );
+
+		if( tr.modelviewIdentity )
+			GL_LoadTexMatrix( pl->textureMatrix );
+		else GL_LoadTexMatrix( pl->textureMatrix2 );
+
+		if( pl->pointlight )
+		{
+			float r = 1.0f / (pl->radius * 2);
+			Vector origin;
+
+			if( !tr.modelviewIdentity )
+			{
+				// rotate attenuation texture into local space
+				if( RI.currententity->angles != g_vecZero )
+					origin = RI.objectMatrix.VectorITransform( pl->origin );
+				else origin = pl->origin - RI.currententity->origin;
+			}
+			else origin = pl->origin;
+
+			Vector color = Vector( pl->color.r, pl->color.g, pl->color.b );
+
+			pglUseProgramObjectARB( cg.shader6 );
+			pglUniform4fARB( cg.shader6_params[0], RI.vieworg[0], RI.vieworg[1], RI.vieworg[2], 0.02f );
+			pglUniform4fARB( cg.shader6_params[1], origin[0], origin[1], origin[2], pl->radius );
+			pglUniform3fvARB( cg.shader6_params[2], 1, R_OVERBRIGHT_SILENT() ? color / 510.0f : color / 255.0f );
+		}
+
+		return;
+	}
+
 	GL_Bind( GL_TEXTURE0, pl->projectionTexture );
 	pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 
@@ -221,8 +256,6 @@ void R_BeginDrawProjection( const plight_t *pl, bool decalPass )
 	if( tr.modelviewIdentity )
 		GL_LoadTexMatrix( pl->textureMatrix );
 	else GL_LoadTexMatrix( pl->textureMatrix2 );
-
-	glState.drawProjection = true;
 
 	// setup attenuation texture
 	if( pl->attenuationTexture != 0 )
@@ -427,6 +460,9 @@ void R_EndDrawProjection( void )
 	pglDepthFunc( GL_LEQUAL );
 	pglDisable( GL_BLEND );
 	RI.currentlight = NULL;
+
+	if( R_BUMP )
+		pglUseProgramObjectARB( NULL );
 }
 
 int R_AllocFrameBuffer( void )

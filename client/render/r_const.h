@@ -40,6 +40,8 @@ GNU General Public License for more details.
 #define MAXARRAYVERTS	8192
 #define TURBSCALE		( 256.0f / M_PI2 )
 #define AMBIENT_EPSILON	0.001f
+#define WATER_TEXTURES		29
+#define WATER_ANIMTIME		29.0f
 
 #define CALC_TEXCOORD_S( v, tex )	(( DotProductFast(( v ), (tex)->vecs[0] ) + (tex)->vecs[0][3] ) / (float)(tex)->texture->width )
 #define CALC_TEXCOORD_T( v, tex )	(( DotProductFast(( v ), (tex)->vecs[1] ) + (tex)->vecs[1][3] ) / (float)(tex)->texture->height )
@@ -52,5 +54,15 @@ enum
 	FBO_PORTALS,		// used for portals
 	FBO_NUM_TYPES,
 };
+
+typedef enum
+{
+	BUMP_STAGE_NONE = 0,
+	BUMP_STAGE_LIGHTMAP,
+	BUMP_STAGE_SPOTLIGHT,
+	BUMP_STAGE_POINTLIGHT,
+	BUMP_STAGE_FINAL,
+} BumpStage;
+
 
 #endif//R_CONST_H

@@ -248,6 +248,7 @@ void R_DrawMirrors( cl_entity_t *ignoreent )
 				}
 			} 
 
+			tr.mirror_entity = e;
 			R_PlaneForMirror( surf, plane, mirrormatrix );
 
 			d = -2.0f * ( DotProduct( RI.vieworg, plane.normal ) - plane.dist );
@@ -606,6 +607,23 @@ void R_CheckMirrorEntitiesOnList( int &numMirrors )
 		RI.currententity = tr.solid_entities[i];
 		RI.currentmodel = RI.currententity->model;
 	
+		assert( RI.currententity != NULL );
+		assert( RI.currententity->model != NULL );
+
+		switch( RI.currentmodel->type )
+		{
+		case mod_brush:
+			R_FindBmodelMirrors( RI.currententity, false, numMirrors );
+			break;
+		}
+	}
+
+	// check water entities
+	for( i = 0; i < tr.num_water_entities; i++ )
+	{
+		RI.currententity = tr.water_entities[i];
+		RI.currentmodel = RI.currententity->model;
+
 		assert( RI.currententity != NULL );
 		assert( RI.currententity->model != NULL );
 

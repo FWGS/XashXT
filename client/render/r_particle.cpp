@@ -1102,7 +1102,7 @@ void CParticleSystem :: DrawParticle( CParticle *part, Vector &right, Vector &up
 				if( R_CullSphereExt( pl->frustum, part->origin, part->m_fSize + 1, pl->clipflags ))
 					continue;
 
-				R_BeginDrawProjection( pl );
+				R_BeginDrawProjection( pl, false, false );
 
 				pglBegin( GL_QUADS );
 					pglVertex3fv( point1 );

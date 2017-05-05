@@ -412,6 +412,7 @@ void R_ClearScene( void )
 	tr.num_mirrors_used = tr.num_portals_used = 0;
 	tr.num_portal_entities = tr.num_screens_used = 0;
 	tr.num_shadows_used = tr.local_client_added = 0;
+	tr.num_water_entities = tr.num_refract_entities = 0;
 	tr.sky_camera = NULL;
 }
 
@@ -443,7 +444,8 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 
 	clent->curstate.renderamt = R_ComputeFxBlend( clent );
 
-	if( clent->curstate.rendermode != kRenderNormal )
+	if( clent->curstate.rendermode != kRenderNormal &&
+			clent->curstate.rendermode != kRenderRefraction )
 	{
 		if( clent->curstate.renderamt <= 0.0f )
 			return true; // invisible
@@ -489,12 +491,35 @@ qboolean R_AddEntity( struct cl_entity_s *clent, int entityType )
 	}
 	else
 	{
-		// translucent
-		if( tr.num_trans_entities >= MAX_VISIBLE_PACKET )
-			return false;
+		if( clent->model->type == mod_brush &&
+			clent->curstate.rendermode == kRenderRefraction )
+		{
+			if( clent->model->flags & BIT( 2 ) ) //MODEL_LIQUID
+			{
+				if( tr.num_water_entities >= MAX_VISIBLE_PACKET )
+					return false;
 
-		tr.trans_entities[tr.num_trans_entities] = clent;
-		tr.num_trans_entities++;
+				tr.water_entities[tr.num_water_entities] = clent;
+				tr.num_water_entities++;
+			}
+			else
+			{
+				if( tr.num_refract_entities >= MAX_VISIBLE_PACKET )
+					return false;
+
+				tr.refract_entities[tr.num_refract_entities] = clent;
+				tr.num_refract_entities++;
+			}
+		}
+		else
+		{
+			// translucent
+			if( tr.num_trans_entities >= MAX_VISIBLE_PACKET )
+				return false;
+
+			tr.trans_entities[tr.num_trans_entities] = clent;
+			tr.num_trans_entities++;
+		}
 	}
 
 	if( entityType == ET_FRAGMENTED )
@@ -822,6 +847,12 @@ static void R_SetupFrame( void )
 	// sort translucents entities by rendermode and distance
 	qsort( tr.trans_entities, tr.num_trans_entities, sizeof( cl_entity_t* ), (cmpfunc)R_TransEntityCompare );
 
+	// sort water entities by distance
+	qsort( tr.water_entities, tr.num_water_entities, sizeof( cl_entity_t* ), (cmpfunc)R_TransEntityCompare );
+
+	// sort refracted entities by distance
+	qsort( tr.refract_entities, tr.num_refract_entities, sizeof( cl_entity_t* ), (cmpfunc)R_TransEntityCompare );
+
 	// current viewleaf
 	RI.waveHeight = RI.refdef.movevars->waveHeight * 2.0f;	// set global waveheight
 	RI.isSkyVisible = false; // unknown at this moment
@@ -837,13 +868,14 @@ R_SetupGL
 */
 static void R_SetupGL( void )
 {
+#if 0
 	if( RI.refdef.waterlevel >= 3 )
 	{
 		float f = sin( GET_CLIENT_TIME() * 0.4f * ( M_PI * 2.7f ));
 		RI.refdef.fov_x += f;
 		RI.refdef.fov_y -= f;
 	}
-
+#endif
 	R_SetupModelviewMatrix( &RI.refdef, RI.worldviewMatrix );
 	R_SetupProjectionMatrix( RI.refdef.fov_x, RI.refdef.fov_y, RI.projectionMatrix );
 
@@ -1201,6 +1233,41 @@ void R_DrawEntitiesOnList( void )
 		R_DrawWeather();
 #endif
 
+	pglDisable( GL_BLEND );
+	pglDepthMask( GL_FALSE );
+	pglColor4ub( 255, 255, 255, 255 );
+
+	if( ( tr.num_water_entities || tr.num_refract_entities ) && !RI.refdef.onlyClientDraw )
+	{
+		for( i = 0; i < tr.num_water_entities; i++ )
+		{
+			RI.currententity = tr.water_entities[i];
+			RI.currentmodel = RI.currententity->model;
+
+			// tell engine about current entity
+			SET_CURRENT_ENTITY( RI.currententity );
+
+			assert( RI.currententity != NULL );
+			assert( RI.currententity->model != NULL );
+
+			R_DrawRefractedBrushModel( RI.currententity, true );
+		}
+
+		for( i = 0; i < tr.num_refract_entities; i++ )
+		{
+			RI.currententity = tr.refract_entities[i];
+			RI.currentmodel = RI.currententity->model;
+
+			// tell engine about current entity
+			SET_CURRENT_ENTITY( RI.currententity );
+
+			assert( RI.currententity != NULL );
+			assert( RI.currententity->model != NULL );
+
+			R_DrawRefractedBrushModel( RI.currententity, false );
+		}
+	}
+
 	// NOTE: some mods with custom renderer may generate glErrors
 	// so we clear it here
 	while( pglGetError() != GL_NO_ERROR );
@@ -1258,6 +1325,15 @@ void R_RenderScene( const ref_params_t *pparams )
 	R_DrawEntitiesOnList();
 
 	R_EndGL();
+
+	if( Q_stricmp( worldmodel->name, tr.worldname ) )
+	{
+		Q_strcpy( tr.worldname, worldmodel->name );
+
+		R_ParseGrassFile();
+		R_LoadAdditionalTextures();
+		R_CreateSurfacesBumpData();
+	}
 }
 
 void HUD_PrintStats( void )

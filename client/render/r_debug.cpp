@@ -476,5 +476,17 @@ msurface_t *R_TraceLine( pmtrace_t *result, const Vector &start, const Vector &e
 		surf = surf2;
 	}
 
+	// trace water entities
+	if(( surf2 = R_ClipToLinks( result, start, end, tr.water_entities, tr.num_water_entities, traceFlags )) != NULL )
+	{
+		surf = surf2;
+	}
+
+	// trace refracted entities
+	if(( surf2 = R_ClipToLinks( result, start, end, tr.refract_entities, tr.num_refract_entities, traceFlags )) != NULL )
+	{
+		surf = surf2;
+	}
+
 	return surf;
 }

@@ -181,6 +181,8 @@ static dllfunc_t multitexturefuncs[] =
 { "glMultiTexCoord2fARB"     , (void **)&pglMultiTexCoord2f },
 { "glMultiTexCoord3fARB"     , (void **)&pglMultiTexCoord3f },
 { "glMultiTexCoord4fARB"     , (void **)&pglMultiTexCoord4f },
+{ "glMultiTexCoord2fvARB"    , (void **)&pglMultiTexCoord2fv },
+{ "glMultiTexCoord3fvARB"    , (void **)&pglMultiTexCoord3fv },
 { "glActiveTextureARB"       , (void **)&pglActiveTextureARB },
 { "glClientActiveTextureARB" , (void **)&pglClientActiveTexture },
 { "glClientActiveTextureARB" , (void **)&pglClientActiveTextureARB },
@@ -276,6 +278,9 @@ static dllfunc_t shaderobjectsfuncs[] =
 { "glBindAttribLocationARB"       , (void **)&pglBindAttribLocationARB },
 { "glGetActiveAttribARB"          , (void **)&pglGetActiveAttribARB },
 { "glGetAttribLocationARB"        , (void **)&pglGetAttribLocationARB },
+{ "glVertexAttrib2f"              , (void **)&pglVertexAttrib2fARB },
+{ "glVertexAttrib2fv"             , (void **)&pglVertexAttrib2fvARB },
+{ "glVertexAttrib3fv"             , (void **)&pglVertexAttrib3fvARB },
 { NULL, NULL }
 };
 
@@ -640,6 +645,43 @@ static void GL_CompileFragmentProgram( const char *source, size_t source_size, u
 	pglDisable( GL_FRAGMENT_PROGRAM_ARB );
 }
 
+int CheckGLSLshader( GLhandleARB shader )
+{
+	int compiled = 0;
+	pglGetObjectParameterivARB(shader, GL_OBJECT_COMPILE_STATUS_ARB, &compiled);
+
+	char logString[ 65535 ];
+	int length = 0, laux = 0;
+	pglGetObjectParameterivARB(shader, GL_OBJECT_INFO_LOG_LENGTH_ARB, &length);
+	pglGetInfoLogARB(shader, length, &laux, logString );
+	gEngfuncs.Con_Printf( "Shader log %i\n%s\n", shader, logString );
+
+	return compiled;
+}
+
+static GLhandleARB GL_CreateGLSLShader( const char *vertex_source, const char *fragment_source )
+{
+	GLhandleARB vertex, fragment, shader;
+
+	vertex = pglCreateShaderObjectARB( GL_VERTEX_SHADER_ARB );
+	fragment = pglCreateShaderObjectARB( GL_FRAGMENT_SHADER_ARB );
+	pglShaderSourceARB( vertex, 1, &vertex_source, NULL );
+	pglShaderSourceARB( fragment, 1, &fragment_source, NULL );
+	pglCompileShaderARB( vertex );
+	pglCompileShaderARB( fragment );
+
+	shader = pglCreateProgramObjectARB();
+	pglAttachObjectARB( shader, vertex );
+	pglAttachObjectARB( shader, fragment );
+	pglLinkProgramARB( shader );
+
+	if( !CheckGLSLshader( vertex ) || !CheckGLSLshader( fragment ) )
+		return 0;
+
+	return shader;
+}
+
+
 static void GL_InitPrograms( void )
 {
 	memset( &cg, 0, sizeof( cg ));
@@ -654,6 +696,69 @@ static void GL_InitPrograms( void )
 		GL_CompileFragmentProgram( fp_decal1_source, sizeof( fp_decal1_source ) - 1, &cg.decal1_shader );
 		GL_CompileFragmentProgram( fp_decal2_source, sizeof( fp_decal2_source ) - 1, &cg.decal2_shader );
 		GL_CompileFragmentProgram( fp_decal3_source, sizeof( fp_decal3_source ) - 1, &cg.decal3_shader );
+	}
+
+	if( GL_Support( R_SHADER_OBJECTS_EXT ) && GL_Support( R_SHADER_GLSL100_EXT ) &&
+		GL_Support( R_VERTEX_SHADER_EXT ) && GL_Support( R_FRAGMENT_SHADER_EXT ) )
+	{
+		cg.shader1 = GL_CreateGLSLShader( shader1_v, shader1_f );
+		cg.shader2 = GL_CreateGLSLShader( shader2_v, shader2_f );
+		cg.shader3 = GL_CreateGLSLShader( shader3_4_v, shader3_f );
+		cg.shader4 = GL_CreateGLSLShader( shader3_4_v, shader4_f );
+		cg.shader5 = GL_CreateGLSLShader( shader5_v, shader5_f );
+		cg.shader6 = GL_CreateGLSLShader( shader6_v, shader6_f );
+
+		pglUseProgramObjectARB( cg.shader1 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader1, "tx1" ), 0 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader1, "tx2" ), 1 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader1, "tx3" ), 2 );
+		cg.shader1_params[0] = pglGetUniformLocationARB( cg.shader1, "p1" );
+		cg.shader1_params[1] = pglGetUniformLocationARB( cg.shader1, "p2" );
+		cg.shader1_params[2] = pglGetUniformLocationARB( cg.shader1, "p3" );
+
+		pglUseProgramObjectARB( cg.shader2 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader2, "tx1" ), 0 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader2, "tx2" ), 1 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader2, "tx3" ), 2 );
+		cg.shader2_params[0] = pglGetUniformLocationARB( cg.shader2, "p1" );
+
+		pglUseProgramObjectARB( cg.shader3 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader3, "tx1" ), 0 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader3, "tx2" ), 1 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader3, "tx3" ), 2 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader3, "tx4" ), 3 );
+		cg.shader3_params[0] = pglGetUniformLocationARB( cg.shader3, "p1" );
+		cg.shader3_params[1] = pglGetUniformLocationARB( cg.shader3, "p2" );
+		cg.shader3_attribs[0] = pglGetAttribLocationARB( cg.shader3, "a1" );
+		cg.shader3_attribs[1] = pglGetAttribLocationARB( cg.shader3, "a2" );
+		cg.shader3_attribs[2] = pglGetAttribLocationARB( cg.shader3, "a3" );
+		cg.shader3_attribs[3] = pglGetAttribLocationARB( cg.shader3, "a4" );
+		cg.shader3_attribs[4] = pglGetAttribLocationARB( cg.shader3, "a5" );
+
+		pglUseProgramObjectARB( cg.shader4 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader4, "tx1" ), 0 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader4, "tx2" ), 1 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader4, "tx3" ), 2 );
+		cg.shader4_params[0] = pglGetUniformLocationARB( cg.shader4, "p1" );
+		cg.shader4_params[1] = pglGetUniformLocationARB( cg.shader4, "p2" );
+		cg.shader4_attribs[0] = pglGetAttribLocationARB( cg.shader4, "a1" );
+		cg.shader4_attribs[1] = pglGetAttribLocationARB( cg.shader4, "a2" );
+		cg.shader4_attribs[2] = pglGetAttribLocationARB( cg.shader4, "a3" );
+		cg.shader4_attribs[3] = pglGetAttribLocationARB( cg.shader4, "a4" );
+		cg.shader4_attribs[4] = pglGetAttribLocationARB( cg.shader4, "a5" );
+
+		pglUseProgramObjectARB( cg.shader5 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader6, "tx1" ), 0 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader6, "tx2" ), 1 );
+
+		pglUseProgramObjectARB( cg.shader6 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader6, "tx1" ), 0 );
+		pglUniform1iARB( pglGetUniformLocationARB( cg.shader6, "tx2" ), 2 );
+		cg.shader6_params[0] = pglGetUniformLocationARB( cg.shader6, "p1" );
+		cg.shader6_params[1] = pglGetUniformLocationARB( cg.shader6, "p2" );
+		cg.shader6_params[2] = pglGetUniformLocationARB( cg.shader6, "p3" );
+
+		pglUseProgramObjectARB( NULL );
 	}
 }
 
@@ -810,13 +915,27 @@ static void GL_InitTextures( void )
 	tr.attenuationStubTexture = FIND_TEXTURE( "*attnno" );	// stub for PCF shader
 	tr.normalizeTexture = FIND_TEXTURE( "*normalize" );
 	tr.dlightCubeTexture = FIND_TEXTURE( "*whiteCube" );	// FIX: used white image (identity brightness)
+	tr.dlightWhiteCubeTexture = FIND_TEXTURE( "*whiteCube" );
 	tr.chromeTexture = LOAD_TEXTURE( "gfx/chrome.tga", NULL, 0, 0 );
+	tr.defaultNormalMap = LOAD_TEXTURE( "gfx/default_norm.tga", NULL, 0, 0 );
+	tr.defaultSpecularMap = LOAD_TEXTURE( "gfx/default_gloss.tga", NULL, 0, 0 );
+	tr.ddeluxeTexture = CREATE_TEXTURE( "ddeluxe", BLOCK_SIZE_DEFAULT, BLOCK_SIZE_DEFAULT, NULL, TF_LIGHTMAP );
+	tr.ddeluxeTexture2 = CREATE_TEXTURE( "ddeluxe2", BLOCK_SIZE_MAX, BLOCK_SIZE_MAX, NULL, TF_LIGHTMAP );
+
+	for( int i = 0; i < WATER_TEXTURES; i++ )
+	{
+		char path[256];
+		Q_snprintf( path, sizeof( path ), "gfx/water/water_normal_%i.tga", i );
+		tr.waterTextures[i] = LOAD_TEXTURE( path, NULL, 0, 0 );
+	}
 
 	R_CreateSpotLightTexture();
 
 	R_CreateNoiseTexture();
 
 	R_CreateFogTextures();
+
+	R_CreateRefractionTexture();
 }
 
 /*

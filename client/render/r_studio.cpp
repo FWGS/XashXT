@@ -2471,7 +2471,7 @@ void CStudioModelRenderer :: DrawDecal( word handle, studiohdr_t *pStudioHdr )
 
 			lastTexture = -1;
 
-			R_BeginDrawProjection( pl, true );
+			R_BeginDrawProjection( pl, true, false );
 
 			for( word mat = list.m_FirstMaterial; mat != m_DecalMaterial.InvalidIndex(); mat = m_DecalMaterial.Next( mat ))
 			{
@@ -3511,7 +3511,7 @@ void CStudioModelRenderer::StudioDrawPoints( void )
 			if( R_CullSphereExt( pl->frustum, origin, studio_radius, pl->clipflags ))
 				continue;
 
-			R_BeginDrawProjection( pl );
+			R_BeginDrawProjection( pl, false, false );
 			StudioDrawMeshes( ptexture, pskinref, STUDIO_PASS_LIGHT );
 			R_EndDrawProjection();
 		}

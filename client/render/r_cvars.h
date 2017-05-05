@@ -66,6 +66,13 @@ extern cvar_t	*r_grass_shadows;
 extern cvar_t	*r_grass_fade_start;
 extern cvar_t	*r_grass_fade_dist;
 extern cvar_t	*r_overbright;
+extern cvar_t	*r_refraction_water;
+extern cvar_t	*r_refraction_glass;
+extern cvar_t	*r_bump;
+extern cvar_t	*r_bump_minlight;
+extern cvar_t	*r_bump_specular;
+extern cvar_t	*r_bump_specular_pow;
+extern cvar_t	*r_bump_parallax_scale;
 extern cvar_t	*r_skyfog;
 extern cvar_t	*r_use_fbo;
 

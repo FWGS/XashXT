@@ -36,9 +36,11 @@ typedef struct
 	msurface_t	*dynamic_surfaces;
 	msurface_t	*lightmap_surfaces[MAX_LIGHTMAPS];
 	byte		lightmap_buffer[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*4];
+	byte		deluxemap_buffer[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*4];
 } gllightmapstate_t;
 
 static unsigned int		r_blocklights[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*3];
+static signed   int		r_blockdeluxe[BLOCK_SIZE_MAX*BLOCK_SIZE_MAX*3];
 static glpoly_t		*fullbright_polys[MAX_TEXTURES];
 static bool		draw_fullbrights = false;
 static mextrasurf_t		*detail_surfaces[MAX_TEXTURES];
@@ -244,6 +246,7 @@ static int LM_AllocBlock( int w, int h, int *x, int *y )
 static void LM_UploadBlock( qboolean dynamic )
 {
 	int	i;
+	char lmName[16];
 
 	if( dynamic )
 	{
@@ -253,6 +256,13 @@ static void LM_UploadBlock( qboolean dynamic )
 		{
 			if( gl_lms.allocated[i] > height )
 				height = gl_lms.allocated[i];
+		}
+		if( tr.deluxemap )
+		{
+			if( RENDER_GET_PARM( PARM_FEATURES, 0 ) & ENGINE_LARGE_LIGHTMAPS )
+				GL_Bind( GL_TEXTURE0, tr.ddeluxeTexture2 );
+			else GL_Bind( GL_TEXTURE0, tr.ddeluxeTexture );
+			pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, height, GL_RGBA, GL_UNSIGNED_BYTE, gl_lms.deluxemap_buffer );
 		}
 
 		if( RENDER_GET_PARM( PARM_FEATURES, 0 ) & ENGINE_LARGE_LIGHTMAPS )
@@ -271,6 +281,12 @@ static void LM_UploadBlock( qboolean dynamic )
 		GL_Bind( GL_TEXTURE0, texture );
 		pglTexSubImage2D( GL_TEXTURE_2D, 0, 0, 0, BLOCK_SIZE, BLOCK_SIZE, GL_RGBA, GL_UNSIGNED_BYTE, gl_lms.lightmap_buffer );
 		tr.lightmapTextures[i] = texture;
+
+		if( tr.deluxemap )
+		{
+			Q_snprintf( lmName, sizeof( lmName ), "*deluxemap%i", i );
+			tr.deluxemapTextures[i] = CREATE_TEXTURE( lmName, BLOCK_SIZE, BLOCK_SIZE, gl_lms.deluxemap_buffer, TF_LIGHTMAP );
+		}
 
 		if( ++gl_lms.current_lightmap_texture == MAX_LIGHTMAPS )
 			HOST_ERROR( "AllocBlock: full\n" );
@@ -329,6 +345,320 @@ static void R_BuildLightMap( msurface_t *surf, byte *dest, int stride )
 			bl += 3;
 			dest += 4;
 		}
+	}
+}
+
+/*
+=============================================================================
+
+   BUMP FUNCTIONS
+
+=============================================================================
+*/
+static void R_BuildDeluxeMap( msurface_t *surf, byte *dest, int stride )
+{
+	int	smax, tmax, *bl;
+	unsigned int scale;
+	int	i, map, size, s, t;
+	color24	*lm, *dm;
+
+	smax = ( surf->extents[0] / LM_SAMPLE_SIZE ) + 1;
+	tmax = ( surf->extents[1] / LM_SAMPLE_SIZE ) + 1;
+	size = smax * tmax;
+
+	lm = surf->samples;
+	dm = tr.deluxemap + ( surf->samples - worldmodel->lightdata );
+
+	memset( r_blockdeluxe, 0, sizeof( int ) * size * 3 );
+
+	// add all the lightmaps
+	for( map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255 && lm; map++ )
+	{
+		scale = RI.lightstylevalue[surf->styles[map]];
+
+		for( i = 0, bl = r_blockdeluxe; i < size; i++, bl += 3, lm++, dm++ )
+		{
+			int l;
+			vec3_t v;
+			v[0] = lm->r;
+			v[1] = lm->g;
+			v[2] = lm->b;
+
+			l = (int)(v.Length() * scale);
+			bl[0] += ((int)dm->r - 128) * l;
+			bl[1] += ((int)dm->g - 128) * l;
+			bl[2] += ((int)dm->b - 128) * l;
+		}
+	}
+
+	// Put into texture format
+	stride -= (smax << 2);
+	bl = r_blockdeluxe;
+
+	for( t = 0; t < tmax; t++, dest += stride )
+	{
+		for( s = 0; s < smax; s++ )
+		{
+			int l;
+			vec3_t n = *(Vector*)bl;
+
+			n = n.Normalize();
+
+			l = (int)(n[0] * 128 + 128); dest[0] = bound(0, l, 255);
+			l = (int)(n[1] * 128 + 128); dest[1] = bound(0, l, 255);
+			l = (int)(n[2] * 128 + 128); dest[2] = bound(0, l, 255);
+			dest[3] = 255;
+
+			bl += 3;
+			dest += 4;
+		}
+	}
+}
+
+void R_SetBumpStage( BumpStage stage )
+{
+	switch( stage )
+	{
+	case BUMP_STAGE_LIGHTMAP:
+		pglUseProgramObjectARB( cg.shader3 );
+		pglUniform3fARB( cg.shader3_params[0], RI.vieworg[0], RI.vieworg[1], RI.vieworg[2] );
+		pglUniform3fARB( cg.shader3_params[1], r_bump_parallax_scale->value, r_bump_specular_pow->value, r_bump_minlight->value );
+		break;
+
+	case BUMP_STAGE_FINAL:
+		pglUseProgramObjectARB( cg.shader4 );
+		pglUniform3fARB( cg.shader4_params[0], RI.vieworg[0], RI.vieworg[1], RI.vieworg[2] );
+		pglUniform1fARB( cg.shader4_params[1], r_bump_parallax_scale->value );
+		break;
+
+	case BUMP_STAGE_SPOTLIGHT:
+	case BUMP_STAGE_POINTLIGHT:
+		{
+			const plight_t *pl = RI.currentlight;
+			Vector color = Vector( pl->color.r, pl->color.g, pl->color.b );
+
+			Vector origin;
+			if( !tr.modelviewIdentity )
+			{
+				// rotate attenuation texture into local space
+				if( RI.currententity->angles != g_vecZero )
+					origin = RI.objectMatrix.VectorITransform( pl->origin );
+				else origin = pl->origin - RI.currententity->origin;
+			}
+			else origin = pl->origin;
+
+			if( stage == BUMP_STAGE_POINTLIGHT )
+			{
+				pglUseProgramObjectARB( cg.shader6 );
+				pglUniform4fARB( cg.shader6_params[0], RI.vieworg[0], RI.vieworg[1], RI.vieworg[2], 0.02f );
+				pglUniform4fARB( cg.shader6_params[1], origin[0], origin[1], origin[2], pl->radius );
+				pglUniform3fvARB( cg.shader6_params[2], 1, R_OVERBRIGHT_SILENT() ? color / 510.0f : color / 255.0f );
+			}
+			else
+			{
+
+			}
+
+			break;
+		}
+
+	default:
+		R_DisableBump();
+		RI.bumpStage = BUMP_STAGE_NONE;
+		return;
+	}
+
+	RI.bumpStage = stage;
+}
+
+void R_DisableBump( void )
+{
+	if( RI.bumpStage != BUMP_STAGE_NONE )
+	{
+		GL_SelectTexture( 3 );
+		GL_CleanUpTextureUnits( 0 );
+		pglUseProgramObjectARB( NULL );
+		pglColor4ub( 255, 255, 255, 255 );
+	}
+}
+
+void R_RestoreBump( void )
+{
+	switch( RI.bumpStage )
+	{
+	case BUMP_STAGE_LIGHTMAP:
+		pglUseProgramObjectARB( cg.shader3 );
+		break;
+
+	case BUMP_STAGE_FINAL:
+		pglUseProgramObjectARB( cg.shader4 );
+		break;
+	}
+}
+
+void R_DrawBumpedSurface( msurface_t *s )
+{
+	mextrasurf_t *es = SURF_INFO( s, RI.currentmodel );
+	float xScale, yScale, sOffset, tOffset;
+	float *bumpdata = es->bumpdata;
+
+	if( bumpdata )
+	{
+		float *v = s->polys->verts[0];
+		int o, n = s->polys->numverts;
+		texture_t *t = s->texinfo->texture;
+
+		GetPolyTexOffs( s->polys, RI.currententity, &sOffset, &tOffset );
+		GET_DETAIL_SCALE( s->texinfo->texture->gl_texturenum, &xScale, &yScale );
+
+		pglBegin( GL_POLYGON );
+
+		pglVertexAttrib3fvARB( cg.shader4_attribs[2], bumpdata );
+		pglVertexAttrib3fvARB( cg.shader4_attribs[3], &bumpdata[3] );
+		pglVertexAttrib3fvARB( cg.shader4_attribs[4], &bumpdata[6] );
+
+		for( o = 0; o < n; o++, v += VERTEXSIZE )
+		{
+			pglVertexAttrib2fARB( cg.shader4_attribs[0], v[3] + sOffset, v[4] + tOffset );
+			pglVertexAttrib2fARB( cg.shader3_attribs[1], ( v[3] + sOffset ) * xScale, ( v[4] + tOffset ) * yScale );
+			pglVertex3fv( v );
+		}
+
+		pglEnd();
+	}
+}
+
+void R_DrawBumpedLightmaps( qboolean dynamic = false, float soffset = 0.0f, float toffset = 0.0f )
+{
+	for( int i = 0; i < worldmodel->numtextures; i++ )
+	{
+		texture_t *t = worldmodel->textures[i];
+		if( !t ) continue;
+
+		msurface_t *s = t->texturechain;
+		if( !s ) continue;
+
+		int speculartex = t->sm_texturenum;
+
+		if( !r_bump_specular->value )
+			speculartex = tr.blackTexture;
+		else if( r_bump_specular->value > 2.0f || ( r_bump_specular->value > 1.0f && speculartex == tr.defaultSpecularMap ) )
+			speculartex = t->gl_texturenum;
+
+		GL_Bind( GL_TEXTURE3, speculartex );
+		GL_Bind( GL_TEXTURE2, t->nm_texturenum );
+
+		for( ; s; s = s->texturechain )
+		{
+			if( s->dlightframe )
+				continue;
+
+			mextrasurf_t *es = SURF_INFO( s, RI.currentmodel );
+			float *bumpdata = es->bumpdata;
+
+			if( bumpdata )
+			{
+				float *v = s->polys->verts[0];
+				int o, n = s->polys->numverts;
+
+				GL_Bind( GL_TEXTURE0, tr.lightmapTextures[s->lightmaptexturenum] );
+				GL_Bind( GL_TEXTURE1, tr.deluxemapTextures[s->lightmaptexturenum] );
+
+				pglBegin( GL_POLYGON );
+
+				pglVertexAttrib3fvARB( cg.shader3_attribs[2], bumpdata );
+				pglVertexAttrib3fvARB( cg.shader3_attribs[3], &bumpdata[3] );
+				pglVertexAttrib3fvARB( cg.shader3_attribs[4], &bumpdata[6] );
+
+				for( o = 0; o < n; o++, v += VERTEXSIZE )
+				{
+					pglVertexAttrib2fvARB( cg.shader3_attribs[0], &v[3] );
+					pglVertexAttrib2fvARB( cg.shader3_attribs[1], &v[5] );
+					pglVertex3fv( v );
+				}
+
+				pglEnd();
+			}
+		}
+	}
+}
+
+void R_DrawBumpedDynamicSurface( msurface_t *s, float soffset, float toffset )
+{
+	mextrasurf_t *es = SURF_INFO( s, RI.currentmodel );
+	float *bumpdata = es->bumpdata;
+
+	if( bumpdata )
+	{
+		float *v = s->polys->verts[0];
+		int o, n = s->polys->numverts;
+		texture_t *t = s->texinfo->texture;
+		int speculartex = t->sm_texturenum;
+
+		if( !r_bump_specular->value )
+			speculartex = tr.blackTexture;
+		else if( r_bump_specular->value > 2.0f || ( r_bump_specular->value > 1.0f && speculartex == tr.defaultSpecularMap ) )
+			speculartex = t->gl_texturenum;
+
+		GL_Bind( GL_TEXTURE3, speculartex );
+		GL_Bind( GL_TEXTURE2, t->nm_texturenum );
+
+		if( RENDER_GET_PARM( PARM_FEATURES, 0 ) & ENGINE_LARGE_LIGHTMAPS )
+		{
+			GL_Bind( GL_TEXTURE0, tr.dlightTexture2 );
+			GL_Bind( GL_TEXTURE1, tr.ddeluxeTexture2 );
+		}
+		else
+		{
+			GL_Bind( GL_TEXTURE0, tr.dlightTexture );
+			GL_Bind( GL_TEXTURE1, tr.ddeluxeTexture );
+		}
+
+		pglBegin( GL_POLYGON );
+
+		pglVertexAttrib3fvARB( cg.shader3_attribs[2], bumpdata );
+		pglVertexAttrib3fvARB( cg.shader3_attribs[3], &bumpdata[3] );
+		pglVertexAttrib3fvARB( cg.shader3_attribs[4], &bumpdata[6] );
+
+		for( o = 0; o < n; o++, v += VERTEXSIZE )
+		{
+			pglVertexAttrib2fvARB( cg.shader3_attribs[0], &v[3] );
+			pglVertexAttrib2fARB( cg.shader3_attribs[1], v[5] - soffset, v[6] - toffset );
+			pglVertex3fv( v );
+		}
+
+		pglEnd();
+	}
+}
+
+void R_DrawBumpedPlight( msurface_t *s )
+{
+	mextrasurf_t *es = SURF_INFO( s, RI.currentmodel );
+	float sOffset, tOffset;
+	float *bumpdata = es->bumpdata;
+
+	if( bumpdata )
+	{
+		float *v = s->polys->verts[0];
+		int o, n = s->polys->numverts;
+		texture_t *t = s->texinfo->texture;
+
+		GL_Bind( GL_TEXTURE3, t->nm_texturenum );
+		GetPolyTexOffs( s->polys, RI.currententity, &sOffset, &tOffset );
+
+		pglBegin( GL_POLYGON );
+
+		pglVertexAttrib3fvARB( cg.shader4_attribs[2], bumpdata );
+		pglVertexAttrib3fvARB( cg.shader4_attribs[3], &bumpdata[3] );
+		pglVertexAttrib3fvARB( cg.shader4_attribs[4], &bumpdata[6] );
+
+		for( o = 0; o < n; o++, v += VERTEXSIZE )
+		{
+			pglVertexAttrib2fARB( cg.shader4_attribs[0], v[3] + sOffset, v[4] + tOffset );
+			pglVertex3fv( v );
+		}
+
+		pglEnd();
 	}
 }
 
@@ -460,7 +790,12 @@ void R_BlendLightmaps( void )
 	}
 
 	// render static lightmaps first
-	for( int i = 0; i < MAX_LIGHTMAPS; i++ )
+	if( R_BUMP )
+	{
+		R_SetBumpStage( BUMP_STAGE_LIGHTMAP );
+		R_DrawBumpedLightmaps();
+	}
+	else for( int i = 0; i < MAX_LIGHTMAPS; i++ )
 	{
 		if( gl_lms.lightmap_surfaces[i] )
 		{
@@ -474,7 +809,7 @@ void R_BlendLightmaps( void )
 	}
 
 	// render dynamic lightmaps
-	if( r_dynamic->value )
+	if( gl_lms.dynamic_surfaces )
 	{
 		LM_InitBlock();
 
@@ -499,6 +834,14 @@ void R_BlendLightmaps( void )
 				base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
 
 				R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
+
+				if( R_BUMP )
+				{
+					base = gl_lms.deluxemap_buffer;
+					base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
+
+					R_BuildDeluxeMap( surf, base, BLOCK_SIZE * 4 );
+				}
 			}
 			else
 			{
@@ -514,9 +857,18 @@ void R_BlendLightmaps( void )
 					{
 						info = SURF_INFO( drawsurf, RI.currentmodel );
 
-						DrawGLPolyChain( drawsurf->polys,
-						( drawsurf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ), 
-						( drawsurf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
+						if( R_BUMP )
+						{
+							R_DrawBumpedDynamicSurface( drawsurf,
+							( drawsurf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ),
+							( drawsurf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
+						}
+						else
+						{
+							DrawGLPolyChain( drawsurf->polys,
+							( drawsurf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ),
+							( drawsurf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
+						}
 					}
 				}
 
@@ -535,6 +887,14 @@ void R_BlendLightmaps( void )
 				base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
 
 				R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
+
+				if( R_BUMP )
+				{
+					base = gl_lms.deluxemap_buffer;
+					base += ( info->dlight_t * BLOCK_SIZE + info->dlight_s ) * 4;
+
+					R_BuildDeluxeMap( surf, base, BLOCK_SIZE * 4 );
+				}
 			}
 		}
 
@@ -546,13 +906,24 @@ void R_BlendLightmaps( void )
 			if( surf->polys )
 			{
 				info = SURF_INFO( surf, RI.currentmodel );
-
-				DrawGLPolyChain( surf->polys,
-				( surf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ),
-				( surf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
+				if( R_BUMP )
+				{
+					R_DrawBumpedDynamicSurface( surf,
+					( surf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ),
+					( surf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
+				}
+				else
+				{
+					DrawGLPolyChain( surf->polys,
+					( surf->light_s - info->dlight_s ) * ( 1.0f / (float)BLOCK_SIZE ),
+					( surf->light_t - info->dlight_t ) * ( 1.0f / (float)BLOCK_SIZE ));
+				}
 			}
 		}
 	}
+
+	if( R_BUMP )
+		R_SetBumpStage( BUMP_STAGE_NONE );
 
 	if( !glState.drawTrans )
 	{
@@ -859,7 +1230,7 @@ void R_DrawSurfaceDecals( msurface_t *fa )
 					if( pl->die < GET_CLIENT_TIME() || !pl->radius )
 						continue;
 
-					R_BeginDrawProjection( pl, true );
+					R_BeginDrawProjection( pl, true, false );
 					R_DrawProjectDecal( p, fa, v, numVerts );
 					R_EndDrawProjection();
 				}
@@ -959,9 +1330,20 @@ void R_AddSurfaceLayers( msurface_t *fa )
 			smax = ( fa->extents[0] / LM_SAMPLE_SIZE ) + 1;
 			tmax = ( fa->extents[1] / LM_SAMPLE_SIZE ) + 1;
 
-			R_BuildLightMap( fa, temp, smax * 4 );
 			R_SetCacheState( fa );
-                              
+
+			if( tr.deluxemap )
+			{
+				R_BuildDeluxeMap( fa, temp, smax * 4 );
+
+				GL_Bind( GL_TEXTURE0, tr.deluxemapTextures[fa->lightmaptexturenum] );
+
+				pglTexSubImage2D( GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax,
+				GL_RGBA, GL_UNSIGNED_BYTE, temp );
+			}
+
+			R_BuildLightMap( fa, temp, smax * 4 );
+
 			GL_Bind( GL_TEXTURE0, tr.lightmapTextures[fa->lightmaptexturenum] );
 
 			pglTexSubImage2D( GL_TEXTURE_2D, 0, fa->light_s, fa->light_t, smax, tmax,
@@ -971,18 +1353,21 @@ void R_AddSurfaceLayers( msurface_t *fa )
 			{
 				fa->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
 				gl_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
+				fa->dlightframe = false;
 			}
 		}
 		else if( !ignore_lightmaps )
 		{
 			fa->lightmapchain = gl_lms.dynamic_surfaces;
 			gl_lms.dynamic_surfaces = fa;
+			fa->dlightframe = true;
 		}
 	}
 	else if( !ignore_lightmaps )
 	{
 		fa->lightmapchain = gl_lms.lightmap_surfaces[fa->lightmaptexturenum];
 		gl_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
+		fa->dlightframe = false;
 	}
 }
 
@@ -993,6 +1378,7 @@ R_RenderBrushPoly
 */
 void R_RenderBrushPoly( msurface_t *fa, qboolean zpass )
 {
+	qboolean	is_bump = false;
 	qboolean	is_mirror = false;
 	qboolean	is_screen = false;
 	qboolean	is_cinema = false;
@@ -1100,13 +1486,25 @@ void R_RenderBrushPoly( msurface_t *fa, qboolean zpass )
 	else
 	{
 		GL_Bind( GL_TEXTURE0, t->gl_texturenum );
+
+		if( RI.bumpStage != BUMP_STAGE_NONE )
+		{
+			is_bump = true;
+			GL_Bind( GL_TEXTURE1, t->nm_texturenum );
+			GL_Bind( GL_TEXTURE2, tr.grayTexture );
+		}
 	}
 
 	if( is_mirror ) R_BeginDrawMirror( fa );
 	if( is_screen || is_cinema ) R_BeginDrawScreen( fa );
-
-	DrawGLPoly( fa->polys, 0.0f, 0.0f );
-
+	if( is_bump )
+		R_DrawBumpedSurface( fa );
+	else
+	{
+		R_DisableBump();
+		DrawGLPoly( fa->polys, 0.0f, 0.0f );
+		R_RestoreBump();
+	}
 	if( RI.currententity == GET_ENTITY( 0 ))
 		r_stats.c_world_polys++;
 	else r_stats.c_brush_polys++; 
@@ -1164,6 +1562,9 @@ void R_DrawTextureChains( void )
 		pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 	}
 
+	if( R_BUMP )
+		R_SetBumpStage( BUMP_STAGE_FINAL );
+
 	for( i = 0; i < worldmodel->numtextures; i++ )
 	{
 		t = worldmodel->textures[i];
@@ -1194,8 +1595,10 @@ void R_DrawTextureChains( void )
 		pglEnable( GL_POLYGON_OFFSET_FILL );
 
 		// draw the all surface decals
+		R_DisableBump();
 		for( s = t->texturechain; s != NULL; s = s->texturechain )
 			R_DrawSurfaceDecals( s );
+		R_RestoreBump();
 
 		pglDisable( GL_POLYGON_OFFSET_FILL );
 		pglBlendFunc( R_OVERBRIGHT_SFACTOR(), GL_SRC_COLOR );
@@ -1213,6 +1616,9 @@ void R_DrawTextureChains( void )
 			pglTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 		}
 	}
+
+	if( R_BUMP )
+		R_SetBumpStage( BUMP_STAGE_NONE );
 
 	if( worldmodel->lightdata && !r_fullbright->value )
 	{
@@ -1507,6 +1913,12 @@ void R_DrawBrushModel( cl_entity_t *e )
 		draw_surfaces[num_surfaces] = psurf;
 		num_surfaces++;
 		assert( ARRAYSIZE( draw_surfaces ) >= num_surfaces );
+
+		if( R_BUMP )
+		{
+			psurf->texturechain = psurf->texinfo->texture->texturechain;
+			psurf->texinfo->texture->texturechain = psurf;
+		}
 	}
 
 	// setup the color and alpha
@@ -1571,7 +1983,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 
 			R_DrawGrass( GRASS_PASS_AMBIENT );
 			R_MergeLightProjection( pl );
-			R_BeginDrawProjection( pl );
+			R_BeginDrawProjection( pl, false, true );
 
 			for( j = 0; j < num_lightsurfs; j++ )
 			{
@@ -1633,9 +2045,15 @@ void R_DrawBrushModel( cl_entity_t *e )
 		break;
 	}
 
+	if( R_BUMP && !glState.drawTrans )
+		R_SetBumpStage( BUMP_STAGE_FINAL );
+
 	for( i = 0; i < num_surfaces; i++ )
 	{
 		psurf = draw_surfaces[i];
+
+		if( R_BUMP )
+			psurf->texinfo->texture->texturechain = NULL;
 
 		if( psurf->flags & SURF_DRAWSKY )
 		{
@@ -1664,6 +2082,9 @@ void R_DrawBrushModel( cl_entity_t *e )
 		else if( !r_lightmap->value || r_fullbright->value )
 			R_RenderBrushPoly( psurf, false );
 	}
+
+	if( R_BUMP && !glState.drawTrans )
+		R_SetBumpStage( BUMP_STAGE_NONE );
 
 	pglEnable( GL_BLEND );
 	pglDepthMask( GL_FALSE );
@@ -1702,6 +2123,9 @@ void R_DrawBrushModel( cl_entity_t *e )
 
 	if( !need_sort && R_SetupFogProjection() )
 	{
+		if( R_BUMP )
+			pglUseProgramObjectARB( cg.shader5 );
+
 		pglDepthFunc( GL_EQUAL );
 
 		for( i = 0; i < num_surfaces; i++ )
@@ -1720,6 +2144,7 @@ void R_DrawBrushModel( cl_entity_t *e )
 
 		pglDepthFunc( GL_LEQUAL );
 		GL_CleanUpTextureUnits( 0 );
+		pglUseProgramObjectARB( NULL );
 		pglColor4ub( 255, 255, 255, 255 );
 	}
 
@@ -1730,6 +2155,255 @@ void R_DrawBrushModel( cl_entity_t *e )
 	R_DrawGrass( GRASS_PASS_FOG );
 
 	R_LoadIdentity();	// restore worldmatrix
+}
+
+/*
+=================
+R_DrawRefractedBrushModel
+=================
+*/
+void R_DrawRefractedBrushModel( cl_entity_t *e, bool water )
+{
+	int		i, j, num_surfaces;
+	vec3_t		mins, maxs;
+	msurface_t	*psurf;
+	model_t		*clmodel;
+	qboolean		rotated;
+
+	if( water && ( RI.currententity == tr.mirror_entity ) )
+		return;
+
+	clmodel = e->model;
+
+	if( e->angles != g_vecZero )
+	{
+		for( i = 0; i < 3; i++ )
+		{
+			mins[i] = e->origin[i] - clmodel->radius;
+			maxs[i] = e->origin[i] + clmodel->radius;
+		}
+		rotated = true;
+	}
+	else
+	{
+		mins = e->origin + clmodel->mins;
+		maxs = e->origin + clmodel->maxs;
+		rotated = false;
+	}
+
+	// don't reflect this entity in mirrors
+	if( e->curstate.effects & EF_NOREFLECT && RI.params & RP_MIRRORVIEW )
+		return;
+
+	// draw only in mirrors
+	if( e->curstate.effects & EF_REFLECTONLY && !( RI.params & RP_MIRRORVIEW ))
+		return;
+
+	if( R_CullBox( mins, maxs, RI.clipFlags ))
+		return;
+
+	if( RI.params & ( RP_SKYPORTALVIEW|RP_PORTALVIEW|RP_SCREENVIEW ))
+	{
+		if( rotated )
+		{
+			if( R_VisCullSphere( e->origin, clmodel->radius ))
+				return;
+		}
+		else
+		{
+			if( R_VisCullBox( mins, maxs ))
+				return;
+		}
+	}
+
+	r_stats.num_drawed_ents++;
+
+	if( rotated ) R_RotateForEntity( e );
+	else R_TranslateForEntity( e );
+
+	e->visframe = tr.framecount; // visible
+
+	if( rotated ) tr.modelorg = RI.objectMatrix.VectorITransform( RI.vieworg );
+	else tr.modelorg = RI.vieworg - e->origin;
+
+	if( water )
+	{
+		float r, g, b, a, scale, rtw, rth, angle, dir[2], speed = 0.0f;
+
+		angle = anglemod( RI.currententity->curstate.colormap );
+		dir[0] = sinf( angle / 180.0f * M_PI );
+		dir[1] = cosf( angle / 180.0f * M_PI );
+
+		if( RI.currententity->curstate.frame )
+			speed = 1.0f / RI.currententity->curstate.frame * 64.0f;
+		scale = RI.currententity->curstate.scale * 8.0f * ( RI.viewport[2] / 640.0f );
+
+		r = RI.currententity->curstate.rendercolor.r / 255.0f;
+		g = RI.currententity->curstate.rendercolor.g / 255.0f;
+		b = RI.currententity->curstate.rendercolor.b / 255.0f;
+
+		if( RI.vieworg[2] < RI.currentmodel->maxs[2] || RI.currententity->curstate.renderamt <= 0.0f || !r_allow_mirrors->value )
+			a = 2.0;
+		else
+			a = ( ( 255.0f - RI.currententity->curstate.renderamt ) / 255.0f ) * 2.0f - 1.0f;
+
+		if( GL_Support( R_ARB_TEXTURE_NPOT_EXT ))
+		{
+			// allow screen size
+			rtw = bound( 96, RI.viewport[2], 1024 );
+			rth = bound( 72, RI.viewport[3], 768 );
+		}
+		else
+		{
+			rtw = NearestPOW( RI.viewport[2], true );
+			rth = NearestPOW( RI.viewport[3], true );
+			rtw = bound( 128, RI.viewport[2], 1024 );
+			rth = bound( 64, RI.viewport[3], 512 );
+		}
+
+		GL_Bind( GL_TEXTURE2, tr.refractionTexture );
+		if( tr.scrcpywaterframe != tr.framecount )
+		{
+			tr.scrcpywaterframe = tr.framecount;
+			pglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_NV, 0, 0, 0, 0, 0, glState.width, glState.height );
+		}
+
+		GL_Cull( GL_NONE );
+		pglUseProgramObjectARB( cg.shader1 );
+		pglUniform3fARB( cg.shader1_params[0], RI.vieworg[0], RI.vieworg[1], RI.vieworg[2] );
+		pglUniform3fARB( cg.shader1_params[1], rtw, rth, scale );
+		pglUniform4fARB( cg.shader1_params[2], r, g, b, a );
+
+		psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
+		for( num_surfaces = i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
+		{
+			if( !( psurf->flags & SURF_DRAWTURB ) || R_CullSurface( psurf, 0 ) )
+				continue;
+
+			mextrasurf_t *es = SURF_INFO( psurf, RI.currentmodel );
+			msurfmesh_t *mesh = es->mesh;
+
+			GL_Bind( GL_TEXTURE0, es->mirrortexturenum );
+			GL_Bind( GL_TEXTURE1, tr.waterTextures[ (int)( RI.refdef.time * WATER_ANIMTIME ) % WATER_TEXTURES ] );
+
+			pglBegin( GL_POLYGON );
+			for( int i = 0; i < mesh->numVerts; i++ )
+			{
+				if( speed )
+					pglTexCoord2f( mesh->verts[i].stcoord[0] + RI.refdef.time / speed * dir[0], mesh->verts[i].stcoord[1] + RI.refdef.time / speed * dir[1] );
+				else
+					pglTexCoord2f( mesh->verts[i].stcoord[0], mesh->verts[i].stcoord[1] );
+
+				pglVertex3fv( mesh->verts[i].vertex );
+			}
+			pglEnd();
+
+			r_stats.c_brush_polys++;
+		}
+
+		GL_SelectTexture( 2 );
+		GL_CleanUpTextureUnits( 0 );
+		pglUseProgramObjectARB( NULL );
+	}
+	else
+	{
+		GL_Bind( GL_TEXTURE2, tr.refractionTexture );
+		if( tr.scrcpyframe != tr.framecount )
+		{
+			tr.scrcpyframe = tr.framecount;
+			pglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_NV, 0, 0, 0, 0, 0, glState.width, glState.height );
+		}
+
+		pglUseProgramObjectARB( cg.shader2 );
+		pglUniform1fARB( cg.shader2_params[0], RI.currententity->curstate.scale * ( RI.viewport[2] / 640.0f ) );
+
+		psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
+		for( num_surfaces = i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
+		{
+			if( R_CullSurface( psurf, 0 ))
+				continue;
+
+			float sOffset, tOffset, *v;
+			glpoly_t *p = psurf->polys;
+			texture_t *t = R_TextureAnimation( psurf->texinfo->texture, psurf - RI.currententity->model->surfaces );
+
+			GL_Bind( GL_TEXTURE0, t->gl_texturenum );
+			GetPolyTexOffs( p, e, &sOffset, &tOffset );
+			GL_Bind( GL_TEXTURE1, t->nm_texturenum );
+
+			pglBegin( GL_POLYGON );
+			for( j = 0, v = p->verts[0]; j < p->numverts; j++, v += VERTEXSIZE )
+			{
+				pglTexCoord2f( v[3] + sOffset, v[4] + tOffset );
+				pglVertex3fv( v );
+			}
+			pglEnd();
+
+			// update lightmap for right decal lighting
+			for( int maps = 0; maps < MAXLIGHTMAPS && psurf->styles[maps] != 255; maps++ )
+			{
+				if( RI.lightstylevalue[psurf->styles[maps]] != psurf->cached_light[maps] )
+				{
+					if(( psurf->styles[maps] >= 32 || psurf->styles[maps] == 0 ))
+					{
+						byte	temp[68*68*4];
+						int	smax, tmax;
+
+						smax = ( psurf->extents[0] / LM_SAMPLE_SIZE ) + 1;
+						tmax = ( psurf->extents[1] / LM_SAMPLE_SIZE ) + 1;
+
+						R_BuildLightMap( psurf, temp, smax * 4 );
+						R_SetCacheState( psurf );
+
+						GL_Bind( GL_TEXTURE0, tr.lightmapTextures[psurf->lightmaptexturenum] );
+
+						pglTexSubImage2D( GL_TEXTURE_2D, 0, psurf->light_s, psurf->light_t, smax, tmax,
+						GL_RGBA, GL_UNSIGNED_BYTE, temp );
+					}
+					break;
+				}
+			}
+
+			r_stats.c_brush_polys++;
+		}
+
+		GL_SelectTexture( 2 );
+		GL_CleanUpTextureUnits( 0 );
+		pglUseProgramObjectARB( NULL );
+
+		GL_Cull( GL_NONE );
+		pglEnable( GL_POLYGON_OFFSET_FILL );
+
+		psurf = &clmodel->surfaces[clmodel->firstmodelsurface];
+		for( num_surfaces = i = 0; i < clmodel->nummodelsurfaces; i++, psurf++ )
+		{
+			draw_surfaces[num_surfaces] = psurf;
+			num_surfaces++;
+			assert( ARRAYSIZE( draw_surfaces ) >= num_surfaces );
+		}
+		qsort( draw_surfaces, num_surfaces, sizeof( msurface_t* ), (cmpfunc)R_SurfaceCompare );
+
+		if( R_CountPlights( ))
+		{
+			for( i = 0; i < MAX_PLIGHTS; i++ )
+			{
+				plight_t *pl = &cl_plights[i];
+
+				if( pl->die < GET_CLIENT_TIME() || !pl->radius )
+					continue;
+
+				R_MergeLightProjection( pl );
+			}
+		}
+
+		for( i = 0; i < num_surfaces; i++ )
+			R_DrawSurfaceDecals( draw_surfaces[i] );
+
+		GL_Cull( GL_FRONT );
+		pglDisable( GL_POLYGON_OFFSET_FILL );
+	}
+
+	R_LoadIdentity();
 }
 
 /*
@@ -2191,7 +2865,7 @@ void R_DrawWorld( void )
 			R_DrawGrass( GRASS_PASS_AMBIENT );
 			R_LightStaticBrushes( pl );
 
-			R_BeginDrawProjection( pl );
+			R_BeginDrawProjection( pl, false, false );
 			R_DrawLightChains();
 			R_EndDrawProjection();
 		}
@@ -2331,12 +3005,72 @@ void GL_CreateSurfaceLightmap( msurface_t *surf )
 
 	surf->lightmaptexturenum = gl_lms.current_lightmap_texture;
 
+	R_SetCacheState( surf );
+
 	base = gl_lms.lightmap_buffer;
 	base += ( surf->light_t * BLOCK_SIZE + surf->light_s ) * 4;
 
 	R_BuildLightMap( surf, base, BLOCK_SIZE * 4 );
-	R_ReLightGrass( surf, true );
-	R_SetCacheState( surf );
+
+	if( tr.deluxemap )
+	{
+		base = gl_lms.deluxemap_buffer;
+		base += ( surf->light_t * BLOCK_SIZE + surf->light_s ) * 4;
+		R_BuildDeluxeMap( surf, base, BLOCK_SIZE * 4 );
+	}
+
+	R_ReLightGrass( surf, true );;
+}
+
+/*
+==================
+R_LoadDeluxeMap
+==================
+*/
+void R_LoadDeluxeMap( void )
+{
+	int compare;
+	int filesize;
+	char file[80];
+
+	Q_strcpy( file, gEngfuncs.pfnGetLevelName() );
+	COM_StripExtension( file );
+	COM_DefaultExtension( file, ".dlit" );
+
+	ALERT( at_console, "Loading deluxe map: \"%s\" - ", file );
+
+	tr.deluxemap = NULL;
+
+	if( !COMPARE_FILE_TIME( file, worldmodel->name, &compare ) )
+		return;
+
+	if( compare < 0 )
+	{
+		ALERT( at_console, "out of date!\n" );
+		return;
+	}
+
+	byte *deluxemap = gEngfuncs.COM_LoadFile( file, 5, &filesize );
+
+	if( !deluxemap )
+	{
+		ALERT( at_console, "file not found.\n" );
+		return;
+	}
+
+	if( deluxemap[0] != 'Q' || deluxemap[1] != 'L' ||
+		deluxemap[2] != 'I' || deluxemap[3] != 'T' ||
+		*(int *)( deluxemap + 4 ) != 1 )
+	{
+		ALERT( at_console, "invalid file.\n" );
+		return;
+	}
+
+	tr.deluxemap = (color24 *)IEngineStudio.Mem_Calloc( 1, filesize - 8 );
+	memcpy( tr.deluxemap, deluxemap + 8, filesize - 8 );
+	gEngfuncs.COM_FreeFile( deluxemap );
+
+	ALERT( at_console, "loaded succesfully.\n" );
 }
 
 /*
@@ -2391,8 +3125,15 @@ void HUD_BuildLightmaps( void )
 	if( RENDER_GET_PARM( PARM_FEATURES, 0 ) & ENGINE_LARGE_LIGHTMAPS )
 		glConfig.block_size = BLOCK_SIZE_MAX;
 	else glConfig.block_size = BLOCK_SIZE_DEFAULT;
-
+#if 0
+	for( i = 0; i < MAX_LIGHTMAPS; i++ )
+	{
+		if( !tr.deluxemapTextures[i] ) break;
+		FREE_TEXTURE( tr.deluxemapTextures[i] );
+	}
+#endif
 	memset( tr.lightmapTextures, 0, sizeof( tr.lightmapTextures ));
+	memset( tr.deluxemapTextures, 0, sizeof( tr.deluxemapTextures ));
 	gl_lms.current_lightmap_texture = 0;
 	tr.world_has_portals = false;
 	tr.world_has_screens = false;
@@ -2400,6 +3141,9 @@ void HUD_BuildLightmaps( void )
 	tr.num_cin_used = 0;
 
 	skychain = NULL;
+
+	if( Q_stricmp( worldmodel->name, tr.worldname ) )
+		R_LoadDeluxeMap();
 
 	// setup all the lightstyles
 	R_AnimateLight();

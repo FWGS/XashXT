@@ -83,6 +83,13 @@ cvar_t	*r_grass_shadows;
 cvar_t	*r_grass_fade_start;
 cvar_t	*r_grass_fade_dist;
 cvar_t	*r_overbright;
+cvar_t	*r_refraction_water;
+cvar_t	*r_refraction_glass;
+cvar_t	*r_bump;
+cvar_t	*r_bump_minlight;
+cvar_t	*r_bump_specular;
+cvar_t	*r_bump_specular_pow;
+cvar_t	*r_bump_parallax_scale;
 cvar_t	*r_skyfog;
 cvar_t	*r_use_fbo;
 cvar_t	*r_allow_weather;
@@ -177,7 +184,7 @@ void V_Init( void )
 	r_bloom		= CVAR_REGISTER( "r_bloom", "0", FCVAR_ARCHIVE );
 	r_bloom_alpha	= CVAR_REGISTER( "r_bloom_alpha", "0.1", FCVAR_ARCHIVE );
 	r_bloom_diamond_size = CVAR_REGISTER( "r_bloom_diamond_size", "8", FCVAR_ARCHIVE );
-	r_bloom_intensity	= CVAR_REGISTER( "r_bloom_intensity", "1", FCVAR_ARCHIVE );
+	r_bloom_intensity	= CVAR_REGISTER( "r_bloom_intensity", "10", FCVAR_ARCHIVE );
 	r_bloom_darken	= CVAR_REGISTER( "r_bloom_darken", "4", FCVAR_ARCHIVE );
 	r_bloom_sample_size = CVAR_REGISTER( "r_bloom_sample_size", "320", FCVAR_ARCHIVE );
 	r_bloom_fast_sample = CVAR_REGISTER( "r_bloom_fast_sample", "0", FCVAR_ARCHIVE );
@@ -190,6 +197,15 @@ void V_Init( void )
 	r_grass_fade_dist = CVAR_REGISTER( "r_grass_fade_dist", "512", FCVAR_ARCHIVE );
 
 	r_overbright = CVAR_REGISTER( "r_overbright", "0", FCVAR_ARCHIVE );
+
+	r_refraction_water = CVAR_REGISTER( "r_refraction_water", "1", FCVAR_ARCHIVE );
+	r_refraction_glass = CVAR_REGISTER( "r_refraction_glass", "1", FCVAR_ARCHIVE );
+
+	r_bump = CVAR_REGISTER( "r_bump", "1", FCVAR_ARCHIVE );
+	r_bump_minlight = CVAR_REGISTER( "r_bump_minlight", "0.15", FCVAR_ARCHIVE );
+	r_bump_specular = CVAR_REGISTER( "r_bump_specular", "2", FCVAR_ARCHIVE );
+	r_bump_specular_pow = CVAR_REGISTER( "r_bump_specular_pow", "8.0", FCVAR_ARCHIVE );
+	r_bump_parallax_scale = CVAR_REGISTER( "r_bump_parallax_scale", "0.02", FCVAR_ARCHIVE );
 
 	r_skyfog = CVAR_REGISTER( "r_skyfog", "0", FCVAR_ARCHIVE );
 
@@ -765,7 +781,10 @@ float V_CalcWaterLevel( struct ref_params_s *pparams )
 		{
 			cl_entity_t *pwater = GET_ENTITY( waterEntity );
 			if( pwater && ( pwater->model != NULL ))
-				waterDist += ( pwater->curstate.scale * 16.0f );
+			{
+				if( pwater->curstate.rendermode != kRenderRefraction )
+					waterDist += ( pwater->curstate.scale * 16.0f );
+			}
 		}
 
 		Vector point = pparams->vieworg;
@@ -1000,7 +1019,7 @@ void V_CalcGlobalFog( struct ref_params_s *pparams )
 
 	bool bOn = pparams->waterlevel < 2 && gHUD.m_fStartDist > 0 && gHUD.m_fEndDist > 0;
 
-#if 0	// enable for fog testing
+#if 1	// enable for fog testing
 	gHUD.m_vecFogColor[0] = 107;
 	gHUD.m_vecFogColor[1] = 112;
 	gHUD.m_vecFogColor[2] = 125;

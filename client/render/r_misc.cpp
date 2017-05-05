@@ -119,6 +119,27 @@ int HUD_AddEntity( int type, struct cl_entity_s *ent, const char *modelname )
 {
 	if( g_fRenderInitialized )
 	{
+		if( ent->curstate.rendermode == kRenderRefraction )
+		{
+			if( ent->model->flags & BIT( 2 ) ) //MODEL_LIQUID
+			{
+				if( !gl_renderer->value || !cg.shader1 || !r_refraction_water->value )
+				{
+					ent->curstate.scale = 0.125f;
+					ent->curstate.renderamt = 192.0f;
+					ent->curstate.rendermode = kRenderTransTexture;
+				}
+			}
+			else
+			{
+				if( !gl_renderer->value || !cg.shader2 || !r_refraction_glass->value )
+				{
+					ent->curstate.renderamt = 128.0f;
+					ent->curstate.rendermode = kRenderTransTexture;
+				}
+			}
+		}
+
 		// use engine renderer
 		if( gl_renderer->value == 0 )
 			return 1;
@@ -624,6 +645,82 @@ void HUD_StudioEvent( const struct mstudioevent_s *event, const struct cl_entity
 	default:
 		ALERT( at_error, "Unknown event %i with options %i\n", event->event, event->options );
 		break;
+	}
+}
+
+void R_CreateRefractionTexture( void )
+{
+	if( tr.refractionTexture  )
+		FREE_TEXTURE( tr.refractionTexture );
+
+	tr.refractionTexture = CREATE_TEXTURE( "*refracttex", glState.width, glState.height, NULL, TF_SCREEN | TF_TEXTURE_RECTANGLE );
+}
+
+void R_LoadAdditionalTextures( void )
+{
+	int i;
+	char path[256];
+	char mapname[64];
+	texture_t *t = worldmodel->textures[0];
+
+	Q_strcpy( mapname, gEngfuncs.pfnGetLevelName() );
+	COM_StripExtension( mapname );
+
+	for( i = 0; i < worldmodel->numtextures; i++, t = worldmodel->textures[i] )
+	{
+		t->nm_texturenum = tr.defaultNormalMap;
+		t->sm_texturenum = tr.defaultSpecularMap;
+
+		Q_snprintf( path, sizeof( path ), "materials/%s/%s_norm.tga", mapname, t->name );
+
+		if( FILE_EXISTS( path ) )
+			t->nm_texturenum = LOAD_TEXTURE( path, NULL, 0, TF_NORMALMAP );
+		else
+		{
+			Q_snprintf( path, sizeof( path ), "materials/common/%s_norm.tga", t->name );
+
+			if( FILE_EXISTS( path ) )
+				t->nm_texturenum = LOAD_TEXTURE( path, NULL, 0, TF_NORMALMAP );
+		}
+
+		Q_snprintf( path, sizeof( path ), "materials/%s/%s_gloss.tga", mapname, t->name );
+
+		if( FILE_EXISTS( path ) )
+			t->sm_texturenum = LOAD_TEXTURE( path, NULL, 0, 0 );
+		else
+		{
+			Q_snprintf( path, sizeof( path ), "materials/common/%s_gloss.tga", t->name );
+
+			if( FILE_EXISTS( path ) )
+				t->sm_texturenum = LOAD_TEXTURE( path, NULL, 0, 0 );
+		}
+	}
+}
+
+void R_CreateSurfacesBumpData( void )
+{
+	int i;
+	msurface_t *surf = worldmodel->surfaces;
+
+	for( i = 0; i < worldmodel->numsurfaces; i++, surf++ )
+	{
+		if( surf->polys && !( surf->flags & (SURF_DRAWSKY|SURF_DRAWTURB) ) )
+		{
+			Vector temp;
+			mextrasurf_t *es = SURF_INFO( surf, worldmodel );
+			float *bumpdata = es->bumpdata = (float *)IEngineStudio.Mem_Calloc( 1, BUMPDATASIZE * sizeof( float ) );
+
+			temp = Vector( surf->texinfo->vecs[0] ).Normalize();
+			temp.CopyToArray( &bumpdata[0] );
+
+			temp = Vector( surf->texinfo->vecs[1] ).Normalize();
+			temp.CopyToArray( &bumpdata[3] );
+
+			if( surf->flags & SURF_PLANEBACK )
+				Vector( -surf->plane->normal ).CopyToArray( &bumpdata[6] );
+			else
+				Vector( surf->plane->normal ).CopyToArray( &bumpdata[6] );
+		}
 	}
 }
 

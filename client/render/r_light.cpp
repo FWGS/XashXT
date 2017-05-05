@@ -691,11 +691,19 @@ void R_DrawShadowChains( void )
 		for( ; es != NULL; es = es->lightchain )
 		{
 			s = INFO_SURF( es, RI.currentmodel );
-			pglBegin( GL_POLYGON );
 
-			for( j = 0, v = s->polys->verts[0]; j < s->polys->numverts; j++, v += VERTEXSIZE )
-				pglVertex3fv( v );
-			pglEnd();
+			if( RI.bumpStage != BUMP_STAGE_NONE )
+			{
+				R_DrawBumpedPlight( s );
+			}
+			else
+			{
+				pglBegin( GL_POLYGON );
+
+				for( j = 0, v = s->polys->verts[0]; j < s->polys->numverts; j++, v += VERTEXSIZE )
+					pglVertex3fv( v );
+				pglEnd();
+			}
 		}
 		t->lightchain = NULL;
 	}

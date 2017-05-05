@@ -70,6 +70,10 @@ GNU General Public License for more details.
 #define R_OVERBRIGHT_SILENT() 	(r_overbright->value >= 2.0f && !r_fullbright->value)
 #define R_OVERBRIGHT_SFACTOR()	(R_OVERBRIGHT() ? GL_DST_COLOR : GL_ZERO)
 
+#define BUMPDATASIZE 9
+#define R_BUMP					(tr.deluxemap&&r_bump->value)
+
+
 enum
 {
 	GL_TEXTURE0 = 0,
@@ -197,6 +201,7 @@ typedef struct
 	
 	float		viewplanedist;
 	mplane_t		clipPlane;
+	bool	bumpStage;
 } ref_instance_t;
 
 typedef struct
@@ -214,6 +219,7 @@ typedef struct
 	int		solidskyTexture;	// quake1 solid-sky layer
 	int		alphaskyTexture;	// quake1 alpha-sky layer
 	int		lightmapTextures[MAX_LIGHTMAPS];
+	int		deluxemapTextures[MAX_LIGHTMAPS];
 	int		dlightTexture;	// custom dlight texture (128x128)
 	int		dlightTexture2;	// custom dlight texture (256x256)
 	int		attenuationTexture;	// normal attenuation
@@ -221,9 +227,11 @@ typedef struct
 	int		attenuationTexture3;// bright attenuation
 	int		attenuationTexture3D;// 3D attenuation
 	int		attenuationStubTexture;
+	int		waterTextures[WATER_TEXTURES];
 	int		chromeTexture;	// for shiny faces
 	int		normalizeTexture;
 	int		dlightCubeTexture;	// for point lights
+	int		dlightWhiteCubeTexture;
 	int		skyboxTextures[6];	// skybox sides
 	int		mirrorTextures[MAX_MIRRORS];
 	int		portalTextures[MAX_MIRRORS];
@@ -239,9 +247,13 @@ typedef struct
 	int		skytexturenum;	// this not a gl_texturenum!
 	int		spotlightTexture;
 	int		noiseTexture;
+	int		refractionTexture;
 	int		fogTexture2D;
 	int		fogTexture1D;
-
+	int		ddeluxeTexture;
+	int		ddeluxeTexture2;
+	int		defaultNormalMap;
+	int		defaultSpecularMap;
 	int		lm_sample_size;
 
 	// framebuffers
@@ -259,6 +271,9 @@ typedef struct
 	cl_entity_t	*trans_entities[MAX_VISIBLE_PACKET];	// translucent brushes
 	cl_entity_t	*child_entities[MAX_VISIBLE_PACKET];	// entities with MOVETYPE_FOLLOW
 	cl_entity_t	*beams_entities[MAX_VISIBLE_PACKET];	// server beams
+	cl_entity_t	*water_entities[MAX_VISIBLE_PACKET];	// water brushes
+	cl_entity_t	*refract_entities[MAX_VISIBLE_PACKET];	// refracted brushes
+
 	gl_movie_t	cinematics[MAX_MOVIES];		// precached cinematics
 	int		num_static_entities;
 	int		num_mirror_entities;
@@ -268,7 +283,10 @@ typedef struct
 	int		num_trans_entities;
 	int		num_child_entities;
 	int		num_beams_entities;
+	int		num_water_entities;
+	int		num_refract_entities;
 
+	cl_entity_t	*mirror_entity;
 	cl_entity_t	*sky_camera;
 	bool		fIgnoreSkybox;
 	bool		fResetVis;
@@ -282,6 +300,8 @@ typedef struct
 	int		realframecount;	// not including passes
 	int		traceframecount;	// to avoid checked each surface multiple times
 	int		grassframecount;
+	int		scrcpyframe;
+	int		scrcpywaterframe;
 	int		framecount;
 
 	bool		world_has_portals;	// indicate a surfaces with SURF_PORTAL bit set
@@ -290,6 +310,7 @@ typedef struct
 	bool		local_client_added;	// indicate what a local client already been added into renderlist
 
 	const ref_params_t	*cached_refdef;	// pointer to viewer refdef
+	color24 *deluxemap;
 
 	// cull info
 	Vector		modelorg;		// relative to viewpoint
@@ -307,6 +328,25 @@ typedef struct
 	unsigned int	decal1_shader;
 	unsigned int	decal2_shader;
 	unsigned int	decal3_shader;	// for pointlights
+
+	GLhandleARB		shader1;
+	GLhandleARB		shader1_params[3];
+
+	GLhandleARB		shader2;
+	GLhandleARB		shader2_params[1];
+
+	GLhandleARB		shader3;
+	GLhandleARB		shader3_params[2];
+	GLhandleARB		shader3_attribs[5];
+
+	GLhandleARB		shader4;
+	GLhandleARB		shader4_params[2];
+	GLhandleARB		shader4_attribs[5];
+
+	GLhandleARB		shader5;
+
+	GLhandleARB		shader6;
+	GLhandleARB		shader6_params[3];
 } ref_programs_t;
 
 typedef struct
@@ -355,7 +395,8 @@ extern ref_programs_t	cg;
 extern ref_stats_t		r_stats;
 extern cl_entity_t		*v_intermission_spot;
 extern plight_t		cl_plights[MAX_PLIGHTS];
-#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_child_entities + tr.num_static_entities - r_stats.c_client_ents)
+//#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_child_entities + tr.num_static_entities - r_stats.c_client_ents)
+#define r_numEntities	(tr.num_solid_entities + tr.num_trans_entities + tr.num_child_entities + tr.num_static_entities + tr.num_water_entities + tr.num_refract_entities - r_stats.c_client_ents)
 #define r_numStatics	(r_stats.c_client_ents)
 
 /*
@@ -467,7 +508,7 @@ void GL_FrontFace( GLenum front );
 void GL_SetRenderMode( int mode );
 void GL_Cull( GLenum cull );
 qboolean R_SetupFogProjection( void );
-void R_BeginDrawProjection( const plight_t *pl, bool decalPass = false );
+void R_BeginDrawProjection( const plight_t *pl, bool decalPass , bool bump );
 void R_EndDrawProjection( void );
 int TriSpriteTexture( model_t *pSpriteModel, int frame );
 int R_GetSpriteTexture( const model_t *m_pSpriteModel, int frame );
@@ -556,7 +597,9 @@ void R_DrawMirrors( cl_entity_t *ignoreent = NULL );
 // r_misc.cpp
 //
 void R_NewMap( void );
-
+void R_LoadAdditionalTextures( void );
+void R_CreateRefractionTexture( void );
+void R_CreateSurfacesBumpData( void );
 //
 // r_movie.cpp
 //
@@ -592,6 +635,11 @@ void R_MarkLeaves( void );
 void R_DrawWorld( void );
 void R_DrawWaterSurfaces( bool fTrans );
 void R_DrawBrushModel( cl_entity_t *e );
+void R_DrawRefractedBrushModel( cl_entity_t *e, bool water );
+void R_DrawBumpedPlight( msurface_t *s );
+void R_SetBumpStage( BumpStage stage );
+void R_DisableBump( void );
+void R_RestoreBump( void );
 void HUD_BuildLightmaps( void );
 void HUD_SetOrthoBounds( const float *mins, const float *maxs );
 
