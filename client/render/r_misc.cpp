@@ -810,5 +810,7 @@ void R_NewMap( void )
 	{
 		Q_strncpy( tr.worldname, worldmodel->name, sizeof( tr.worldname ));
 		R_ParseGrassFile();
+		R_LoadAdditionalTextures();
+		R_CreateSurfacesBumpData();
 	}
 }

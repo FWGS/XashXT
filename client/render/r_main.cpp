@@ -1325,15 +1325,6 @@ void R_RenderScene( const ref_params_t *pparams )
 	R_DrawEntitiesOnList();
 
 	R_EndGL();
-
-	if( Q_stricmp( worldmodel->name, tr.worldname ) )
-	{
-		Q_strcpy( tr.worldname, worldmodel->name );
-
-		R_ParseGrassFile();
-		R_LoadAdditionalTextures();
-		R_CreateSurfacesBumpData();
-	}
 }
 
 void HUD_PrintStats( void )

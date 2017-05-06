@@ -79,7 +79,6 @@ typedef struct texture_s
 	struct mextrasurf_s	*lightchain;	// used for drawing spotlights
 	unsigned short nm_texturenum;
 	unsigned short sm_texturenum;
-	unsigned int unused;
 } texture_t;
 
 typedef struct
