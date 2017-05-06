@@ -934,8 +934,6 @@ static void GL_InitTextures( void )
 	R_CreateNoiseTexture();
 
 	R_CreateFogTextures();
-
-	R_CreateRefractionTexture();
 }
 
 /*

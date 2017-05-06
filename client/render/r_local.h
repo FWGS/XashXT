@@ -508,7 +508,7 @@ void GL_FrontFace( GLenum front );
 void GL_SetRenderMode( int mode );
 void GL_Cull( GLenum cull );
 qboolean R_SetupFogProjection( void );
-void R_BeginDrawProjection( const plight_t *pl, bool decalPass , bool bump );
+void R_BeginDrawProjection( const plight_t *pl, bool decalPass = false , bool bump = false );
 void R_EndDrawProjection( void );
 int TriSpriteTexture( model_t *pSpriteModel, int frame );
 int R_GetSpriteTexture( const model_t *m_pSpriteModel, int frame );

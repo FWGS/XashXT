@@ -1130,7 +1130,7 @@ void R_LightForPoint( const Vector &point, color24 *ambientLight, bool invLight,
 	}
 
 	// add dynamic lights
-	if( radius && r_dynamic->value )
+	if( radius )
 	{
 		int	lnum, total; 
 		float	f;

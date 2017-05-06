@@ -257,6 +257,7 @@ static void LM_UploadBlock( qboolean dynamic )
 			if( gl_lms.allocated[i] > height )
 				height = gl_lms.allocated[i];
 		}
+
 		if( tr.deluxemap )
 		{
 			if( RENDER_GET_PARM( PARM_FEATURES, 0 ) & ENGINE_LARGE_LIGHTMAPS )
@@ -400,7 +401,8 @@ static void R_BuildDeluxeMap( msurface_t *surf, byte *dest, int stride )
 		for( s = 0; s < smax; s++ )
 		{
 			int l;
-			vec3_t n = *(Vector*)bl;
+			vec3_t n; // = *(Vector*)bl;
+			VectorCopyFast(bl, n);
 
 			n = n.Normalize();
 
@@ -2262,10 +2264,11 @@ void R_DrawRefractedBrushModel( cl_entity_t *e, bool water )
 		}
 
 		GL_Bind( GL_TEXTURE2, tr.refractionTexture );
+
 		if( tr.scrcpywaterframe != tr.framecount )
 		{
 			tr.scrcpywaterframe = tr.framecount;
-			pglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_NV, 0, 0, 0, 0, 0, glState.width, glState.height );
+			pglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_EXT, 0, 0, 0, 0, 0, glState.width, glState.height );
 		}
 
 		GL_Cull( GL_NONE );
@@ -2311,7 +2314,7 @@ void R_DrawRefractedBrushModel( cl_entity_t *e, bool water )
 		if( tr.scrcpyframe != tr.framecount )
 		{
 			tr.scrcpyframe = tr.framecount;
-			pglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_NV, 0, 0, 0, 0, 0, glState.width, glState.height );
+			pglCopyTexSubImage2D( GL_TEXTURE_RECTANGLE_EXT, 0, 0, 0, 0, 0, glState.width, glState.height );
 		}
 
 		pglUseProgramObjectARB( cg.shader2 );

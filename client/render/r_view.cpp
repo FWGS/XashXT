@@ -1019,7 +1019,7 @@ void V_CalcGlobalFog( struct ref_params_s *pparams )
 
 	bool bOn = pparams->waterlevel < 2 && gHUD.m_fStartDist > 0 && gHUD.m_fEndDist > 0;
 
-#if 1	// enable for fog testing
+#if 0	// enable for fog testing
 	gHUD.m_vecFogColor[0] = 107;
 	gHUD.m_vecFogColor[1] = 112;
 	gHUD.m_vecFogColor[2] = 125;

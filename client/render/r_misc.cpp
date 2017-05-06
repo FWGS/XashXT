@@ -770,6 +770,8 @@ void R_NewMap( void )
 		R_FreeFrameBuffer( i );
 	}
 
+	R_CreateRefractionTexture();
+
 	CL_ClearPlights();
 
 	R_FreeCinematics(); // free old cinematics
